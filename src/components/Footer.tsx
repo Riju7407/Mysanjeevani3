@@ -15,22 +15,20 @@ export default function Footer() {
               India's trusted healthcare platform providing medicines, health products, and wellness solutions.
             </p>
             <div className="flex gap-3 mt-4">
-              <a href="#" className="text-gray-400 hover:text-white">
-                <span className="sr-only">Facebook</span>
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.469v6.766z" />
-                </svg>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white">
-                <span className="sr-only">Twitter</span>
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2s9 5 20 5a9.5 9.5 0 00-9-5.5c4.75 2.25 7-7 7-7a10.6 10.6 0 01-9-5.5z" />
-                </svg>
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white">
+              <a href="https://www.instagram.com/mysanjeevni21_/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-pink-500 transition-colors">
                 <span className="sr-only">Instagram</span>
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0m0 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10" />
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                  <circle cx="17" cy="7" r="1" fill="currentColor"/>
+                </svg>
+              </a>
+              <a href="https://wa.me/9555753336" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-green-500 transition-colors">
+                <span className="sr-only">WhatsApp</span>
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" fill="#25D366"/>
+                  <path d="M12.021 18.381c-3.52 0-6.381-2.861-6.381-6.381 0-3.52 2.861-6.381 6.381-6.381 3.52 0 6.381 2.861 6.381 6.381 0 3.52-2.861 6.381-6.381 6.381zm0-11.601c-2.862 0-5.22 2.358-5.22 5.22s2.358 5.22 5.22 5.22 5.22-2.358 5.22-5.22-2.358-5.22-5.22-5.22z" fill="#25D366"/>
+                  <path d="M15.572 13.944c-.19-.095-1.124-.555-1.298-.618-.174-.063-.3-.095-.427.095-.127.19-.491.617-.601.745-.11.127-.221.143-.411.048-.19-.095-.803-.296-.534-1.18.191-.511.512-.826 1.019-.968.506-.143 1.354-.222 2.032.555.678.777.222 1.544-.063 1.815-.286.27-.77.429-1.127.329z" fill="white"/>
                 </svg>
               </a>
             </div>
