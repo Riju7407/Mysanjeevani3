@@ -32,6 +32,13 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'completed', 'failed', 'refunded'],
       default: 'pending',
     },
+    shippingCharge: {
+      type: Number,
+      default: 0,
+    },
+    courier: {
+      type: String,
+    },
     razorpayOrderId: String,
     razorpayPaymentId: String,
     razorpaySignature: String,

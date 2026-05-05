@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
@@ -8,6 +9,7 @@ import 'slick-carousel/slick/slick-theme.css';
 interface HeroSlide {
   id: number;
   image: string;
+  href: string;
 }
 
 const formatHeroImage = (url: string) => {
@@ -18,33 +20,38 @@ const formatHeroImage = (url: string) => {
 };
 
 const HERO_SLIDES: HeroSlide[] = [
-  { id: 1, image: '/l1.png' },
-  { id: 2, image: '/a1.png' },
-  { id: 3, image: '/w1.png' },
-  { id: 4, image: '/d1.png' },
-  { id: 5, image: '/h1.png' },
+  { id: 1, image: '/l1.png', href: '/lab-tests' },
+  { id: 2, image: '/a1.png', href: '/medicines?category=sexual%20wellness' },
+  { id: 3, image: '/w1.png', href: '/doctor-consultation' },
+  { id: 4, image: '/d1.png', href: '/ayurveda' },
+  { id: 5, image: '/h1.png', href: '/homeopathy' },
 ];
 
 const HeroCarousel: React.FC = () => {
+  const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  const handleSlideClick = (href: string) => {
+    router.push(href);
+  };
+
   const settings = {
-    dots: true,
+    dots: false,
     infinite: true,
-    speed: 500,
+    speed: 800,
     slidesToShow: 1,
     slidesToScroll: 1,
     autoplay: true,
-    autoplaySpeed: 3200,
+    autoplaySpeed: 4000,
     arrows: false,
     pauseOnHover: true,
-    customPaging: (_i: number) => (
-      <div className="h-2.5 w-2.5 rounded-full bg-slate-400/70 transition hover:bg-slate-500" />
-    ),
+    swipe: false,
+    touchMove: false,
+    accessibility: false,
   };
 
   if (!isMounted) {
@@ -55,11 +62,19 @@ const HeroCarousel: React.FC = () => {
     <div className="relative h-full w-full overflow-hidden rounded-2xl bg-white">
       <Slider {...settings}>
         {HERO_SLIDES.map((slide) => (
-          <div key={slide.id} className="h-full w-full">
+          <div key={slide.id} className="relative h-full w-full">
             <img
               src={formatHeroImage(slide.image)}
               alt="Hero image"
               className="block h-56 w-full object-cover object-center"
+              draggable={false}
+            />
+            <button
+              onClick={() => handleSlideClick(slide.href)}
+              onTouchEnd={() => handleSlideClick(slide.href)}
+              className="absolute inset-0 w-full h-full bg-transparent cursor-pointer hover:opacity-90 transition-opacity"
+              tabIndex={-1}
+              style={{ zIndex: 10, border: 'none', padding: 0 }}
             />
           </div>
         ))}
@@ -67,6 +82,41 @@ const HeroCarousel: React.FC = () => {
 
       {/* Custom Dots Styling */}
       <style>{`
+        * {
+          -webkit-tap-highlight-color: transparent !important;
+        }
+
+        .slick-slide,
+        .slick-slide div,
+        .slick-slide img,
+        .slick-slider,
+        .slick-track,
+        .slick-list {
+          outline: 0 !important;
+          outline: none !important;
+          -moz-outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+          -webkit-appearance: none !important;
+          -webkit-box-shadow: none !important;
+        }
+
+        .slick-slide:focus,
+        .slick-slide > div:focus,
+        .slick-slide:active,
+        .slick-slide > div:active,
+        .slick-slide.slick-active,
+        .slick-slide.slick-active > div {
+          outline: 0 !important;
+          outline: none !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+
+        button:focus {
+          outline: none !important;
+        }
+
         .slick-dots {
           position: absolute !important;
           bottom: 10px !important;

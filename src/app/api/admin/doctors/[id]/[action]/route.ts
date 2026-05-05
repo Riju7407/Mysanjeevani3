@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Doctor } from '@/lib/models/Doctor';
 import { User } from '@/lib/models/User';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(
   request: NextRequest,
@@ -70,6 +77,28 @@ export async function POST(
         { status: 200 }
       );
     } else if (action === 'reject') {
+      // Delete all Cloudinary images before rejecting
+      const cloudinaryUrls = [
+        doctor.aadharCardUrl,
+        doctor.panCardUrl,
+        doctor.registrationCertificateUrl,
+      ].filter(Boolean);
+
+      for (const url of cloudinaryUrls) {
+        try {
+          const matches = url.match(/\/([^\/]+)\/([^\/]+)\.(jpg|jpeg|png|pdf)$/i);
+          if (matches) {
+            const folder = matches[1];
+            const fileName = matches[2];
+            const resourceType = url.includes('.pdf') ? 'raw' : 'image';
+            const publicId = `${folder}/${fileName}`;
+            await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+          }
+        } catch (err) {
+          console.error('Error deleting Cloudinary image:', err);
+        }
+      }
+
       // Update doctor status
       doctor.approvalStatus = 'rejected';
       doctor.isApproved = false;

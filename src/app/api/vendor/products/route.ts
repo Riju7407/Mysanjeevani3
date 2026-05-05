@@ -48,6 +48,57 @@ const VENDOR_CATEGORY_MAP = {
     'Infection',
     'Women',
   ],
+  Nutrition: [
+    'Sports Nutrition',
+    'Health Food & Drinks',
+    'Vitamin & Dietary Supplements',
+    'Organic Products',
+    'Green Teas',
+    'Digestives',
+  ],
+  'Personal Care': [
+    'Aroma Oils',
+    'Mens Grooming',
+    'Female Care',
+    'Skin Care',
+    'Bath & Shower',
+    'Hair Care',
+    'Elderly Care',
+    'Mosquito Repellents',
+    'Oral Care',
+  ],
+  Fitness: [
+    'Supports & Splints',
+    'Health Devices',
+    'Fitness Equipment',
+    'Hospital Supplies',
+    'Aroma Therapy',
+    'Disability Aids',
+    'Massagers',
+    'Bandages & Tapes',
+    'Walking Sticks',
+  ],
+  'Sexual Wellness': [
+    'Supplements',
+    'Condoms',
+  ],
+  Unani: [
+    'Unani Medicines',
+    'Habbe & Qurs',
+    'Majun & Jawarish',
+    'Safoof, Labub & Kushta',
+    'Sharbat, Sirka & Arq',
+    'Lauq & Saoot',
+    'Khamira & Itrifal',
+    'Roghan & Oils',
+    'Unani Brands',
+  ],
+  'Baby Care': [
+    'Tonics & Supplements',
+    'Bath & Skin',
+    'Wipes & Diapers',
+    'Gift Packs',
+  ],
 } as const;
 
 type VendorProductType = keyof typeof VENDOR_CATEGORY_MAP;
@@ -106,9 +157,9 @@ function resolveTypeAndCategory(productType: string | undefined, category: strin
   const rawType = (productType || '').trim();
   const rawCategory = (category || '').trim();
   const inferredType = inferProductTypeFromCategory(rawCategory);
-  const legacyMappedType = rawType.toLowerCase() === 'nutrition' ? 'Generic Medicine' : rawType;
-  const resolvedType: VendorProductType = isVendorProductType(legacyMappedType)
-    ? legacyMappedType
+  // Direct type validation - no legacy conversions
+  const resolvedType: VendorProductType = isVendorProductType(rawType)
+    ? (rawType as VendorProductType)
     : (inferredType || 'Generic Medicine');
 
   // Keep compatibility for legacy category aliases, but do not block categories

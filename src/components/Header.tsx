@@ -1163,7 +1163,7 @@ export default function Header() {
                         </Link>
                         <div className="border-t border-gray-100 my-2"></div>
                         <Link
-                          href="/vendor/register"
+                          href="/signup?role=vendor"
                           className="block px-4 py-2 text-emerald-600 hover:bg-emerald-50 font-semibold"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
@@ -1354,7 +1354,7 @@ export default function Header() {
               <Link href="/signup" className="block w-full text-center bg-linear-to-r from-orange-500 to-orange-600 text-white py-3 rounded-lg hover:from-orange-600 hover:to-orange-700 font-semibold shadow-md hover:shadow-lg transition duration-200">
                 SignUp
               </Link>
-              <Link href="/vendor/register" className="block w-full text-center bg-emerald-100 text-emerald-700 py-2 rounded-lg font-semibold hover:bg-emerald-200">
+              <Link href="/signup?role=vendor" className="block w-full text-center bg-emerald-100 text-emerald-700 py-2 rounded-lg font-semibold hover:bg-emerald-200">
                 🤝 Become a Vendor
               </Link>
             </>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { DocumentViewer } from '@/components/DocumentViewer';
 
 interface Vendor {
   _id: string;
@@ -33,20 +34,6 @@ export default function AdminVendors() {
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [message, setMessage] = useState('');
-
-  const renderDocumentLink = (url?: string, label?: string) => {
-    if (!url) return <span className="text-gray-500">Not uploaded</span>;
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:text-blue-800 underline"
-      >
-        {label || 'View document'}
-      </a>
-    );
-  };
 
   useEffect(() => {
     fetchVendors();
@@ -208,10 +195,10 @@ export default function AdminVendors() {
                     {filter === 'pending' && (
                       <div className="mt-4 rounded-lg border border-gray-200 p-3 bg-gray-50 text-sm space-y-2">
                         <p className="font-semibold text-gray-800">Verification Documents</p>
-                        <p>Aadhar Card: {renderDocumentLink(vendor.aadharCardUrl, 'View Aadhar Card')}</p>
-                        <p>PAN Card: {renderDocumentLink(vendor.panCardUrl, 'View PAN Card')}</p>
-                        <p>GST Certificate: {renderDocumentLink(vendor.gstCertificateUrl, 'View GST Certificate')}</p>
-                        <p>Drug License: {renderDocumentLink(vendor.drugLicenseUrl, 'View Drug License')}</p>
+                        <div>Aadhar Card: <DocumentViewer url={vendor.aadharCardUrl} label="View Aadhar Card" /></div>
+                        <div>PAN Card: <DocumentViewer url={vendor.panCardUrl} label="View PAN Card" /></div>
+                        <div>GST Certificate: <DocumentViewer url={vendor.gstCertificateUrl} label="View GST Certificate" /></div>
+                        <div>Drug License: <DocumentViewer url={vendor.drugLicenseUrl} label="View Drug License" /></div>
                       </div>
                     )}
                   </div>

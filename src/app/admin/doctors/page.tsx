@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { DocumentViewer } from '@/components/DocumentViewer';
 
 interface DoctorRequest {
   _id: string;
@@ -29,21 +30,6 @@ export default function AdminDoctors() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalNote, setApprovalNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-
-  const renderDocumentLink = (url?: string, label?: string) => {
-    if (!url) return <span className="text-sm text-gray-500">Not uploaded</span>;
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800"
-      >
-        <span className="text-lg">📄</span>
-        <span>{label || 'View Document'}</span>
-      </a>
-    );
-  };
 
   useEffect(() => {
     fetchDoctors();
@@ -317,15 +303,9 @@ export default function AdminDoctors() {
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <p className="text-sm font-medium text-gray-700 mb-2">Verification Documents:</p>
                   <div className="space-y-2 text-sm">
-                    <p>Aadhar Card: {renderDocumentLink(doctor.aadharCardUrl, 'View Aadhar Card')}</p>
-                    <p>PAN Card: {renderDocumentLink(doctor.panCardUrl, 'View PAN Card')}</p>
-                    <p>
-                      Registration Certificate:{' '}
-                      {renderDocumentLink(
-                        doctor.registrationCertificateUrl || doctor.identityDocumentUrl,
-                        'View Registration Certificate'
-                      )}
-                    </p>
+                    <div className="flex items-center gap-2"><span>📄</span> Aadhar Card: <DocumentViewer url={doctor.aadharCardUrl} label="View Aadhar Card" /></div>
+                    <div className="flex items-center gap-2"><span>📄</span> PAN Card: <DocumentViewer url={doctor.panCardUrl} label="View PAN Card" /></div>
+                    <div className="flex items-center gap-2"><span>📄</span> Registration Certificate: <DocumentViewer url={doctor.registrationCertificateUrl || doctor.identityDocumentUrl} label="View Registration Certificate" /></div>
                   </div>
                 </div>
               </div>

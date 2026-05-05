@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Doctor } from '@/lib/models/Doctor';
 import { User } from '@/lib/models/User';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -41,6 +48,28 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id } = await params;
     const doctor = await Doctor.findByIdAndDelete(id).lean();
     if (!doctor) return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
+
+    // Delete all Cloudinary images
+    const cloudinaryUrls = [
+      (doctor as any).aadharCardUrl,
+      (doctor as any).panCardUrl,
+      (doctor as any).registrationCertificateUrl,
+    ].filter(Boolean);
+
+    for (const url of cloudinaryUrls) {
+      try {
+        const matches = url.match(/\/([^\/]+)\/([^\/]+)\.(jpg|jpeg|png|pdf)$/i);
+        if (matches) {
+          const folder = matches[1];
+          const fileName = matches[2];
+          const resourceType = url.includes('.pdf') ? 'raw' : 'image';
+          const publicId = `${folder}/${fileName}`;
+          await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+        }
+      } catch (err) {
+        console.error('Error deleting Cloudinary image:', err);
+      }
+    }
 
     const userId = (doctor as any).userId;
     const doctorEmail = String((doctor as any).email || '').trim().toLowerCase();

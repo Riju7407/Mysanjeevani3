@@ -2,6 +2,53 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Vendor } from '@/lib/models/Vendor';
 import { Product } from '@/lib/models/Product';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const deleteVendorAndAssets = async (vendorId: string) => {
+  const vendor = await Vendor.findById(vendorId);
+
+  if (!vendor) {
+    return null;
+  }
+
+  const cloudinaryUrls = [
+    vendor.aadharCardUrl,
+    vendor.panCardUrl,
+    vendor.gstCertificateUrl,
+    vendor.drugLicenseUrl,
+  ].filter((url): url is string => Boolean(url));
+
+  for (const url of cloudinaryUrls) {
+    try {
+      const matches = url.match(/\/([^\/]+)\/([^\/]+)\.(jpg|jpeg|png|pdf)$/i);
+
+      if (matches) {
+        const folder = matches[1];
+        const fileName = matches[2];
+        const resourceType = url.includes('.pdf') ? 'raw' : 'image';
+        const publicId = `${folder}/${fileName}`;
+
+        await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+      }
+    } catch (err) {
+      console.error('Error deleting Cloudinary image:', err);
+    }
+  }
+
+  const deletedProducts = await Product.deleteMany({ vendorId: vendor._id });
+  await Vendor.findByIdAndDelete(vendorId);
+
+  return {
+    vendor,
+    deletedProductsCount: deletedProducts.deletedCount || 0,
+  };
+};
 
 // GET pending vendors
 export async function GET(request: NextRequest) {
@@ -51,30 +98,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let updateData: any = {};
-
     if (action === 'approve') {
-      updateData = {
+      const updatedVendor = await Vendor.findByIdAndUpdate(
+        vendorId,
+        {
         status: 'verified',
         verifiedAt: new Date(),
-      };
-    } else {
-      updateData = {
-        status: 'rejected',
-        rejectionReason: rejectionReason || 'Application rejected',
-      };
+        },
+        { new: true }
+      ).select('-password');
+
+      return NextResponse.json(
+        {
+          message: 'Vendor approved successfully',
+          vendor: updatedVendor,
+        },
+        { status: 200 }
+      );
     }
 
-    const updatedVendor = await Vendor.findByIdAndUpdate(
-      vendorId,
-      updateData,
-      { new: true }
-    ).select('-password');
+    const deletedVendorResult = await deleteVendorAndAssets(vendorId);
+
+    if (!deletedVendorResult) {
+      return NextResponse.json(
+        { error: 'Vendor not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       {
-        message: `Vendor ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
-        vendor: updatedVendor,
+        message: 'Vendor rejected successfully',
+        vendor: deletedVendorResult.vendor,
+        deletedProductsCount: deletedVendorResult.deletedProductsCount,
       },
       { status: 200 }
     );
@@ -102,30 +158,59 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!['suspend', 'reactivate'].includes(action)) {
+    if (!['suspend', 'reactivate', 'deactivate', 'delete'].includes(action)) {
       return NextResponse.json(
-        { error: 'Action must be suspend or reactivate' },
+        { error: 'Action must be suspend, reactivate, deactivate, or delete' },
         { status: 400 }
       );
     }
 
-    let updateData: any = {};
-
     if (action === 'suspend') {
-      updateData = {
-        status: 'suspended',
-        isActive: false,
-      };
-    } else {
-      updateData = {
-        status: 'verified',
-        isActive: true,
-      };
+      const deletedVendorResult = await deleteVendorAndAssets(vendorId);
+
+      if (!deletedVendorResult) {
+        return NextResponse.json(
+          { error: 'Vendor not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          message: 'Vendor suspended successfully',
+          vendor: deletedVendorResult.vendor,
+          deletedProductsCount: deletedVendorResult.deletedProductsCount,
+        },
+        { status: 200 }
+      );
+    }
+
+    if (action === 'deactivate' || action === 'delete') {
+      const deletedVendorResult = await deleteVendorAndAssets(vendorId);
+
+      if (!deletedVendorResult) {
+        return NextResponse.json(
+          { error: 'Vendor not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          message: `Vendor ${action}d successfully`,
+          vendor: deletedVendorResult.vendor,
+          deletedProductsCount: deletedVendorResult.deletedProductsCount,
+        },
+        { status: 200 }
+      );
     }
 
     const updatedVendor = await Vendor.findByIdAndUpdate(
       vendorId,
-      updateData,
+      {
+        status: 'verified',
+        isActive: true,
+      },
       { new: true }
     ).select('-password');
 
@@ -136,17 +221,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    let deletedProductsCount = 0;
-    if (action === 'suspend') {
-      const deleteResult = await Product.deleteMany({ vendorId: updatedVendor._id });
-      deletedProductsCount = deleteResult.deletedCount || 0;
-    }
-
     return NextResponse.json(
       {
-        message: `Vendor ${action === 'suspend' ? 'suspended' : 'reactivated'} successfully`,
+        message: 'Vendor reactivated successfully',
         vendor: updatedVendor,
-        deletedProductsCount,
       },
       { status: 200 }
     );

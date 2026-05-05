@@ -593,7 +593,10 @@ export default function AdminMedicines() {
     const isFitness = productType === 'Fitness';
     const isUnani = productType === 'Unani';
     const categories = (m as any).categories || [];
-    const category = categories.length > 0 ? getCategoryName(categories[0]) : m.category;
+    // Always use m.category as primary source, only use categories[0] if categories exist
+    const category = m.category || (categories.length > 0 ? getCategoryName(categories[0]) : '');
+    const subcategory = m.subcategory || (categories.length > 1 ? getCategoryName(categories[1]) : '');
+    const categoryPath = category ? (subcategory ? [category, subcategory] : [category]) : [];
     const existingPopularSection =
       (m as any).popularSection ||
       ((m as any).isPopularGeneric ? 'Generic' :
@@ -602,7 +605,7 @@ export default function AdminMedicines() {
        (m as any).isPopularLabTests ? 'LabTests' :
        (m as any).isPopular ? 'Generic' :
        'None');
-    setProdForm({ name: m.name, brand: m.brand || '', category, subcategory: (m as any).subcategory || '', categories, categoryPath: (m as any).categoryPath || categories, diseasePaths: Array.isArray((m as any).diseasePaths) ? (m as any).diseasePaths : ((m.diseaseCategory || m.diseaseSubcategory) ? [[m.diseaseCategory || '', m.diseaseSubcategory || '']] : []), diseaseCategory: m.diseaseCategory || '', diseaseSubcategory: m.diseaseSubcategory || '', productType: productType as VendorProductType, price: String(m.price), usdPrice: String((m as any).usdPrice || ''), mrp: String(m.mrp || ''), stock: String(m.stock), description: m.description || '', safetyInformation: (m as any).safetyInformation || '', specifications: (m as any).specifications || '', benefit: m.benefit || '', requiresPrescription: m.requiresPrescription || false, image: m.image || '', popularSection: existingPopularSection, potency: (m as any).potency || '', quantity: (m as any).quantity || '', quantityUnit: (m as any).quantityUnit || 'None' });
+    setProdForm({ name: m.name, brand: m.brand || '', category, subcategory, categories, categoryPath, diseasePaths: Array.isArray((m as any).diseasePaths) ? (m as any).diseasePaths : ((m.diseaseCategory || m.diseaseSubcategory) ? [[m.diseaseCategory || '', m.diseaseSubcategory || '']] : []), diseaseCategory: m.diseaseCategory || '', diseaseSubcategory: m.diseaseSubcategory || '', productType: productType as VendorProductType, price: String(m.price), usdPrice: String((m as any).usdPrice || ''), mrp: String(m.mrp || ''), stock: String(m.stock), description: m.description || '', safetyInformation: (m as any).safetyInformation || '', specifications: (m as any).specifications || '', benefit: m.benefit || '', requiresPrescription: m.requiresPrescription || false, image: m.image || '', popularSection: existingPopularSection, potency: (m as any).potency || '', quantity: (m as any).quantity || '', quantityUnit: (m as any).quantityUnit || 'None' });
     setImages(m.images || []);
     setShowProdForm(true);
   };

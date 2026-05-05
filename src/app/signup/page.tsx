@@ -185,6 +185,38 @@ export default function SignupPage() {
   };
 
   const handleDocumentChange = (key: DocumentKey, file: File | null) => {
+    if (!file) {
+      setDocuments((prev) => ({ ...prev, [key]: null }));
+      setError('');
+      return;
+    }
+
+    // Validate file format - only jpg, jpeg, png, pdf allowed
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+
+    if (!allowedExtensions.includes(fileExtension)) {
+      setError(`Invalid file format for ${key}. Only JPG, JPEG, PNG, and PDF files are allowed.`);
+      setDocuments((prev) => ({ ...prev, [key]: null }));
+      return;
+    }
+
+    if (!allowedMimeTypes.includes(file.type)) {
+      setError(`Invalid file type for ${key}. Please upload a JPG, PNG, or PDF file.`);
+      setDocuments((prev) => ({ ...prev, [key]: null }));
+      return;
+    }
+
+    // Check file size (max 5MB)
+    const maxSizeInBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+      setError(`File size for ${key} exceeds 5MB limit.`);
+      setDocuments((prev) => ({ ...prev, [key]: null }));
+      return;
+    }
+
+    setError('');
     setDocuments((prev) => ({ ...prev, [key]: file }));
   };
 
@@ -505,6 +537,7 @@ export default function SignupPage() {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
+                  required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-gray-900"
                 >
                   <option value="user">User</option>
@@ -512,6 +545,12 @@ export default function SignupPage() {
                   <option value="doctor">Doctor</option>
                 </select>
               </div>
+
+              {(formData.role === 'vendor' || formData.role === 'doctor') && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded">
+                  Only JPG, JPEG, PNG and PDF files are allowed for document uploads.
+                </div>
+              )}
 
               {formData.role === 'vendor' && (
                 <>
@@ -527,6 +566,7 @@ export default function SignupPage() {
                       name="businessType"
                       value={formData.businessType}
                       onChange={handleChange}
+                      required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-gray-900"
                     >
                       <option value="pharmacy">Pharmacy</option>
@@ -550,6 +590,7 @@ export default function SignupPage() {
                       name="vendorMedicineType"
                       value={formData.vendorMedicineType}
                       onChange={handleChange}
+                      required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition text-gray-900"
                     >
                       <option value="allopathic">Allopathic Medicine</option>
@@ -568,7 +609,7 @@ export default function SignupPage() {
                     </label>
                     <input
                       type="file"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) => handleDocumentChange('vendorAadhar', e.target.files?.[0] || null)}
                       required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
@@ -581,7 +622,7 @@ export default function SignupPage() {
                     </label>
                     <input
                       type="file"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) => handleDocumentChange('vendorPan', e.target.files?.[0] || null)}
                       required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
@@ -594,7 +635,7 @@ export default function SignupPage() {
                     </label>
                     <input
                       type="file"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) => handleDocumentChange('vendorGst', e.target.files?.[0] || null)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     />
@@ -606,7 +647,7 @@ export default function SignupPage() {
                     </label>
                     <input
                       type="file"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) => handleDocumentChange('vendorDrugLicense', e.target.files?.[0] || null)}
                       required={formData.vendorMedicineType !== 'ayurveda'}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
@@ -672,7 +713,7 @@ export default function SignupPage() {
                     <input
                       type="file"
                       id="doctorAadhar"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) => handleDocumentChange('doctorAadhar', e.target.files?.[0] || null)}
                       required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
@@ -689,7 +730,7 @@ export default function SignupPage() {
                     <input
                       type="file"
                       id="doctorPan"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) => handleDocumentChange('doctorPan', e.target.files?.[0] || null)}
                       required
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
@@ -706,7 +747,7 @@ export default function SignupPage() {
                     <input
                       type="file"
                       id="doctorRegistrationCertificate"
-                      accept="image/*,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf"
                       onChange={(e) =>
                         handleDocumentChange('doctorRegistrationCertificate', e.target.files?.[0] || null)
                       }

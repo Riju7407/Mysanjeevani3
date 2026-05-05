@@ -677,7 +677,9 @@ export default function VendorDashboard() {
       )?.[0] as VendorProductType) || inferProductTypeFromCategory(product.category);
     const normalizedCategory = product.category || getDefaultCategoryForTypeDynamic(inferredType);
     const inferredProductType = (product.productType as VendorProductType) || inferredType;
-    const editCategoryPath = findCategoryPathFromTree(inferredProductType, normalizedCategory);
+    const editCategoryPath = product.subcategory 
+      ? [normalizedCategory, product.subcategory]
+      : findCategoryPathFromTree(inferredProductType, normalizedCategory);
     const isHomeopathy = inferredProductType === 'Homeopathy';
     const isAyurveda = inferredProductType === 'Ayurveda Medicine';
     const isNutrition = inferredProductType === 'Nutrition';
@@ -1332,20 +1334,7 @@ export default function VendorDashboard() {
                     <span className="text-sm font-medium text-slate-700">Requires Prescription (Rx)</span>
                   </label>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <label className="block text-sm font-semibold text-slate-900 mb-3">Display in Popular Sections</label>
-                    <select
-                      value={newProduct.popularSection}
-                      onChange={(e) => setNewProduct({ ...newProduct, popularSection: e.target.value as 'None' | 'Generic' | 'Ayurveda' | 'Homeopathy' | 'LabTests' })}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
-                    >
-                      <option value="None">None</option>
-                      <option value="Generic">Popular Medicines</option>
-                      <option value="Ayurveda">Popular Ayurveda Products</option>
-                      <option value="Homeopathy">Popular Homeopathy Products</option>
-                      <option value="LabTests">Popular Lab Tests</option>
-                    </select>
-                  </div>
+
                   <div className="flex gap-3">
                     <button
                       type="submit"
@@ -1682,20 +1671,7 @@ export default function VendorDashboard() {
                     />
                     <span className="text-sm font-medium text-slate-700">Requires Prescription (Rx)</span>
                   </label>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <label className="block text-sm font-semibold text-slate-900 mb-3">Display in Popular Sections</label>
-                    <select
-                      value={editProduct.popularSection}
-                      onChange={(e) => setEditProduct({ ...editProduct, popularSection: e.target.value as 'None' | 'Generic' | 'Ayurveda' | 'Homeopathy' | 'LabTests' })}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
-                    >
-                      <option value="None">None</option>
-                      <option value="Generic">Popular Medicines</option>
-                      <option value="Ayurveda">Popular Ayurveda Products</option>
-                      <option value="Homeopathy">Popular Homeopathy Products</option>
-                      <option value="LabTests">Popular Lab Tests</option>
-                    </select>
-                  </div>
+
                   <div className="flex gap-3">
                     <button
                       type="submit"

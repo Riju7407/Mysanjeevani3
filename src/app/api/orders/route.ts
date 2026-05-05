@@ -7,7 +7,7 @@ import { User } from '@/lib/models/User';
 import { Product } from '@/lib/models/Product';
 import { Address } from '@/lib/models/Address';
 import { Vendor } from '@/lib/models/Vendor';
-import { createShiprocketOrder, generateAWB } from '@/lib/shiprocket';
+import { createShiprocketOrder, generateAWB, getShippingRates, trackShipment } from '@/lib/shiprocket';
 
 const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
@@ -110,11 +110,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new order in database
+    // Fetch delivery address to determine country and pincode
+    const deliveryAddress = await Address.findById(deliveryAddressId);
+    if (!deliveryAddress) {
+      return NextResponse.json({ error: 'Delivery address not found' }, { status: 404 });
+    }
+
+    // Determine shipping charge: free for non-India, Shiprocket for India
+    let shippingCharge = 0;
+    let shippingCourier: string | undefined;
+    const countryNormalized = (deliveryAddress.country || '').trim().toLowerCase();
+
+    if (countryNormalized !== 'india' && countryNormalized !== 'in') {
+      // Free shipping for non-India addresses
+      shippingCharge = 0;
+    } else {
+      try {
+        const pickupPincode = process.env.SHIPROCKET_PICKUP_PINCODE || '110001';
+        const weightKg = (items && Array.isArray(items)) ? (items.length * 0.5) : 0.5;
+        const rates = await getShippingRates({ pickup_pincode: pickupPincode, delivery_pincode: deliveryAddress.pincode || '', weightKg });
+        shippingCharge = rates.shippingCharge || 0;
+        shippingCourier = rates.courier;
+      } catch (rateErr: any) {
+        console.error('Error fetching shipping rates:', rateErr?.message || rateErr);
+        shippingCharge = Number(process.env.DEFAULT_SHIPPING_CHARGE || 0);
+      }
+    }
+
+    // Create new order in database (include shippingCharge)
     const order = await Order.create({
       userId,
       items,
-      totalPrice,
+      totalPrice: Number(totalPrice) + Number(shippingCharge),
+      shippingCharge,
+      courier: shippingCourier,
       deliveryAddress: deliveryAddressId,
       status: 'pending',
       paymentStatus: 'pending',
@@ -335,11 +364,11 @@ async function createShiprocketShipment(order: any) {
         hsn: '', // Need to add HSN to product model if required
       })),
       payment_method: 'Prepaid', // Since payment is already done
-      shipping_charges: 0, // Calculate if needed
+      shipping_charges: order.shippingCharge || 0,
       giftwrap_charges: 0,
       transaction_charges: 0,
       total_discount: 0,
-      sub_total: order.totalPrice,
+      sub_total: order.totalPrice - (order.shippingCharge || 0),
       length: 10, // Default dimensions, should be from product
       breadth: 10,
       height: 10,
