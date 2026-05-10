@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
       }
 
       const existingCategory = commission.categoryCommissions.find(
-        (cc) => cc.category === categoryId
+        (cc: any) => cc.category === categoryId
       );
 
       if (existingCategory) {
