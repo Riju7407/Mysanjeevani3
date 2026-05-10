@@ -344,25 +344,31 @@ export default function AdminDashboard() {
             href="/admin/users"
             className="bg-linear-to-br from-blue-500 to-blue-600 hover:shadow-lg hover:from-blue-600 hover:to-blue-700 text-white px-6 py-4 rounded-lg font-semibold text-center transition transform hover:scale-105 shadow-md"
           >
-            👥 Manage Users
+            Manage Users
           </Link>
           <Link
             href="/admin/vendors"
             className="bg-linear-to-br from-emerald-500 to-emerald-600 hover:shadow-lg hover:from-emerald-600 hover:to-emerald-700 text-white px-6 py-4 rounded-lg font-semibold text-center transition transform hover:scale-105 shadow-md"
           >
-            🏪 Manage Vendors
+            Manage Vendors
           </Link>
           <Link
             href="/admin/medicines"
             className="bg-linear-to-br from-green-500 to-green-600 hover:shadow-lg hover:from-green-600 hover:to-green-700 text-white px-6 py-4 rounded-lg font-semibold text-center transition transform hover:scale-105 shadow-md"
           >
-            💊 Manage Medicines
+            Manage Medicines
           </Link>
           <Link
             href="/admin/analytics"
             className="bg-linear-to-br from-purple-500 to-purple-600 hover:shadow-lg hover:from-purple-600 hover:to-purple-700 text-white px-6 py-4 rounded-lg font-semibold text-center transition transform hover:scale-105 shadow-md"
           >
-            📊 Analytics
+            Analytics
+          </Link>
+          <Link
+            href="/admin/wallet-management"
+            className="bg-linear-to-br from-orange-500 to-orange-600 hover:shadow-lg hover:from-orange-600 hover:to-orange-700 text-white px-6 py-4 rounded-lg font-semibold text-center transition transform hover:scale-105 shadow-md"
+          >
+            Wallet Management
           </Link>
         </div>
       </div>

@@ -60,6 +60,7 @@ const HOMEOPATHY_CATEGORY_ALIASES: Record<string, string> = {
 function HomeopathyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isIndia } = usePreferredCountry();
   const urlCategory = searchParams.get('category') || '';
   const urlSearch = searchParams.get('search') || '';
   const productsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -341,7 +342,7 @@ function HomeopathyContent() {
             {/* Products Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredProducts.map((product) => {
-                const productDiscount = product.mrp && product.mrp > product.price
+                const productDiscount = isIndia && product.mrp && product.mrp > product.price
                   ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
                   : product.discount || 0;
 
@@ -370,7 +371,7 @@ function HomeopathyContent() {
                       )}
 
                       <div className="absolute inset-0 flex items-start justify-end p-3 pointer-events-none">
-                        {!!productDiscount && (
+                        {!!productDiscount && isIndia && (
                           <span className="text-[11px] font-bold text-emerald-600">
                             {productDiscount}% OFF
                           </span>
@@ -403,7 +404,7 @@ function HomeopathyContent() {
                       <div className="mb-2 flex items-end justify-between">
                         <div className="flex items-baseline gap-2">
                           <span className="text-base font-black text-slate-900">{product.currencySymbol || '₹'}{product.displayPrice ?? product.price}</span>
-                        {(product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
+                        {isIndia && (product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
                             <span className="text-xs text-slate-400 line-through">{product.currencySymbol || '₹'}{product.displayMrp ?? product.mrp}</span>
                         )}
                         </div>

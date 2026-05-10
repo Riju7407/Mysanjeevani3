@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 declare global {
   interface Window {
@@ -147,6 +148,7 @@ async function loadRazorpayScript() {
 function LabTestsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isIndia } = usePreferredCountry();
   const [activeTab, setActiveTab] = useState<'tests' | 'bookings'>('tests');
   const [tests, setTests] = useState<LabTest[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -705,7 +707,7 @@ function LabTestsPageContent() {
                         )}
 
                         <div className="absolute inset-0 flex items-start justify-end p-3 pointer-events-none">
-                          {test.mrp && test.mrp > test.price && (
+                          {isIndia && test.mrp && test.mrp > test.price && (
                             <span className="text-[11px] font-bold text-emerald-600">
                               {discountPercent(test)}% OFF
                             </span>
@@ -737,11 +739,11 @@ function LabTestsPageContent() {
                         <div className="mb-2 flex items-end justify-between">
                           <div className="flex items-baseline gap-2">
                             <span className="text-base font-black text-slate-900">₹{test.price}</span>
-                            {test.mrp && test.mrp > test.price && (
+                            {isIndia && test.mrp && test.mrp > test.price && (
                               <span className="text-xs text-slate-400 line-through">₹{test.mrp}</span>
                             )}
                           </div>
-                          {test.mrp && test.mrp > test.price && (
+                          {isIndia && test.mrp && test.mrp > test.price && (
                             <span className="text-[11px] font-bold text-emerald-600">{discountPercent(test)}% OFF</span>
                           )}
                         </div>

@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { OTPVerificationModal } from '@/components/OTPVerificationModal';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface LabTest {
   _id: string;
@@ -104,6 +105,7 @@ export default function LabTestDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
+  const { isIndia } = usePreferredCountry();
   const testId = params.id as string;
 
   const [test, setTest] = useState<LabTest | null>(null);
@@ -568,7 +570,7 @@ export default function LabTestDetailsPage() {
     !isThyrocareTest ||
     (Boolean(bookingForm.collectionTime) &&
       availableSlots.some((slot) => slot.startTime === bookingForm.collectionTime));
-  const discountPercent = test && test.mrp && test.mrp > test.price ? Math.round(((test.mrp - test.price) / test.mrp) * 100) : 0;
+  const discountPercent = isIndia && test && test.mrp && test.mrp > test.price ? Math.round(((test.mrp - test.price) / test.mrp) * 100) : 0;
   const testsIncludedList = Array.isArray(test?.testsIncluded)
     ? test.testsIncluded.filter((item) => String(item || '').trim().length > 0)
     : String(test?.testsIncluded || '')
@@ -674,7 +676,7 @@ export default function LabTestDetailsPage() {
                     <p className="text-gray-600 text-sm mb-1">Price</p>
                     <div className="flex items-baseline gap-3">
                       <span className="text-4xl font-bold text-emerald-700">₹{test.price}</span>
-                      {test.mrp && test.mrp > test.price && (
+                      {isIndia && test.mrp && test.mrp > test.price && (
                         <>
                           <span className="text-lg text-gray-400 line-through">₹{test.mrp}</span>
                           <span className="text-2xl font-bold text-red-600">{discountPercent}% OFF</span>

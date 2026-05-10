@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { OTPVerificationModal } from '@/components/OTPVerificationModal';
 import { isIndiaCountry, normalizeCountryCode, type CountryCode } from '@/lib/countryPreference';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface CartItem {
   id: string | number;
@@ -94,6 +95,7 @@ export default function CartPage() {
     country: 'India',
   });
   const router = useRouter();
+  const { isIndia: isIndiaPreference } = usePreferredCountry();
 
   const isIndia = isIndiaCountry(selectedCountry);
   const currencySymbol = isIndiaCountry(selectedCountry) ? '₹' : '$';
@@ -101,7 +103,7 @@ export default function CartPage() {
   const totalPrice = cartItems.reduce((sum, item) => sum + effectivePrice(item) * item.quantity, 0);
   const discount = Math.floor(totalPrice * 0.10); // 10% discount
   const finalPrice = totalPrice - discount;
-  const deliveryCharge = isIndia ? 0 : 5;
+  const deliveryCharge = isIndia ? 50 : 0;
   const totalAmount = finalPrice + deliveryCharge;
 
   const getStoredCountry = () => {
@@ -114,18 +116,45 @@ export default function CartPage() {
     return 'IN' as CountryCode;
   };
 
-  useEffect(() => {
-    const country = getStoredCountry();
-    setSelectedCountry(country);
-    setSelectedPaymentMethod(isIndiaCountry(country) ? 'domestic' : 'paypal');
-
-    // Load cart from localStorage
+  const syncCartWithCountry = async (country: CountryCode) => {
     const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        const parsed = JSON.parse(savedCart);
-        const normalized = Array.isArray(parsed)
-          ? parsed.map((item: any) => ({
+    if (!savedCart) return;
+
+    try {
+      const parsed = JSON.parse(savedCart);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+
+      // Fetch fresh product details with current country pricing
+      const updatedItems = await Promise.all(
+        parsed.map(async (item: any) => {
+          try {
+            const response = await fetch(`/api/products/${item.id}`, {
+              headers: {
+                'Cookie': `preferredCountry=${country}`,
+              },
+              cache: 'no-store',
+            });
+            const data = await response.json();
+            const product = data.product;
+
+            if (product) {
+              return {
+                id: item.id,
+                name: product.name || item.name || 'Product',
+                price: product.displayPrice || product.price || 0,
+                displayPrice: product.displayPrice || product.price || 0,
+                displayMrp: product.displayMrp ?? product.mrp,
+                currencySymbol: (product.displayCurrency === 'USD' || product.currency === 'USD') ? ('$' as const) : ('₹' as const),
+                currency: (product.displayCurrency === 'USD' || product.currency === 'USD') ? ('USD' as const) : ('INR' as const),
+                quantity: Number(item.quantity) || 1,
+                brand: product.brand || item.brand || 'MySanjeevni',
+                image: product.image || product.icon || item.image || '💊',
+                vendorId: item.vendorId,
+              };
+            }
+          } catch {
+            // Fall back to stored item if API fails
+            return {
               id: item.id,
               name: item.name || 'Product',
               price: Number(item.price ?? item.displayPrice) || 0,
@@ -136,13 +165,51 @@ export default function CartPage() {
               quantity: Number(item.quantity) || 1,
               brand: item.brand || 'MySanjeevni',
               image: item.image || '💊',
-            }))
-          : [];
-        setCartItems(normalized);
-      } catch {
-        setCartItems([]);
+              vendorId: item.vendorId,
+            };
+          }
+        })
+      );
+
+      setCartItems(updatedItems as CartItem[]);
+      // Update localStorage with synced cart items
+      localStorage.setItem('cart', JSON.stringify(updatedItems));
+    } catch {
+      // If syncing fails, just load the cart as-is
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        try {
+          const parsed = JSON.parse(savedCart);
+          const normalized = Array.isArray(parsed)
+            ? parsed.map((item: any) => ({
+                id: item.id,
+                name: item.name || 'Product',
+                price: Number(item.price ?? item.displayPrice) || 0,
+                displayPrice: Number(item.displayPrice ?? item.price) || 0,
+                displayMrp: item.displayMrp != null ? Number(item.displayMrp) || undefined : undefined,
+                currencySymbol: item.currencySymbol === '$' ? ('$' as const) : ('₹' as const),
+                currency: item.currency === 'USD' ? ('USD' as const) : ('INR' as const),
+                quantity: Number(item.quantity) || 1,
+                brand: item.brand || 'MySanjeevni',
+                image: item.image || '💊',
+                vendorId: item.vendorId,
+              }))
+            : [];
+          setCartItems(normalized);
+        } catch {
+          setCartItems([]);
+        }
       }
     }
+  };
+
+  useEffect(() => {
+    const country = getStoredCountry();
+    setSelectedCountry(country);
+    setSelectedPaymentMethod(isIndiaCountry(country) ? 'domestic' : 'paypal');
+
+    // Sync cart with current country pricing
+    syncCartWithCountry(country);
 
     // Load user from localStorage
     const userStr = localStorage.getItem('user');
@@ -150,6 +217,21 @@ export default function CartPage() {
       setUser(JSON.parse(userStr));
     }
   }, []);
+
+  // Watch for country preference changes and sync cart items
+  useEffect(() => {
+    const handleCountryChange = () => {
+      const newCountry = getStoredCountry();
+      if (newCountry !== selectedCountry) {
+        setSelectedCountry(newCountry);
+        setSelectedPaymentMethod(isIndiaCountry(newCountry) ? 'domestic' : 'paypal');
+        syncCartWithCountry(newCountry);
+      }
+    };
+
+    window.addEventListener('storage', handleCountryChange);
+    return () => window.removeEventListener('storage', handleCountryChange);
+  }, [selectedCountry]);
 
   useEffect(() => {
     const loadPaypalConfig = async () => {

@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
 
+function isCloudinaryImageUrl(url?: string) {
+  return !!url && /^https?:\/\/res\.cloudinary\.com\//i.test(String(url).trim());
+}
+
 export async function PUT(request: NextRequest) {
   try {
     await connectDB();
 
     const body = await request.json();
-    const { userId, fullName, phone } = body;
+    const { userId, fullName, phone, fullAddress, profileImage } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -23,13 +27,30 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    if (profileImage !== undefined && profileImage && !isCloudinaryImageUrl(profileImage)) {
+      return NextResponse.json(
+        { error: 'Profile image must be uploaded to Cloudinary first' },
+        { status: 400 }
+      );
+    }
+
     // Update user in database
+    const updates: Record<string, unknown> = {
+      fullName: fullName.trim(),
+      phone: phone?.trim() || '',
+    };
+
+    if (fullAddress !== undefined) {
+      updates.fullAddress = fullAddress?.trim() || '';
+    }
+
+    if (profileImage !== undefined) {
+      updates.profileImage = profileImage || '';
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      {
-        fullName: fullName.trim(),
-        phone: phone?.trim() || '',
-      },
+      { $set: updates },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -48,6 +69,8 @@ export async function PUT(request: NextRequest) {
           fullName: updatedUser.fullName,
           email: updatedUser.email,
           phone: updatedUser.phone,
+          profileImage: updatedUser.profileImage,
+          fullAddress: updatedUser.fullAddress,
           role: updatedUser.role,
           isVerified: updatedUser.isVerified,
         },

@@ -29,6 +29,10 @@ const productSchema = new mongoose.Schema(
     categories: [{
       type: String,
     }],
+    extraCategoryPaths: {
+      type: [[String]],
+      default: [],
+    },
     potency: {
       type: String,
       enum: POTENCY_OPTIONS,

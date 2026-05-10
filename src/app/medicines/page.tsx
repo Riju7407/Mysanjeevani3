@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Suspense } from 'react';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface Product {
   _id: string;
@@ -290,6 +291,7 @@ function getProductPageHref(product: Product): string {
 function MedicinesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { isIndia } = usePreferredCountry();
   // Decode URL parameters to handle encoded characters (spaces, special chars)
   const rawUrlCategory = searchParams.get('category') || '';
   const urlCategory = rawUrlCategory ? decodeURIComponent(rawUrlCategory) : '';
@@ -789,7 +791,7 @@ function MedicinesContent() {
                       )}
 
                       <div className="absolute inset-0 flex items-start justify-end p-3 pointer-events-none">
-                        {product.mrp && product.mrp > product.price && (
+                        {isIndia && product.mrp && product.mrp > product.price && (
                           <span className="text-[11px] font-bold text-emerald-600">
                             {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF
                           </span>
@@ -831,11 +833,11 @@ function MedicinesContent() {
                       <div className="mb-2 flex items-end justify-between">
                         <div className="flex items-baseline gap-2">
                           <span className="text-base font-black text-slate-900">{product.currencySymbol || '₹'}{product.displayPrice ?? product.price}</span>
-                          {(product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
+                          {isIndia && (product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
                             <span className="text-xs text-slate-400 line-through">{product.currencySymbol || '₹'}{product.displayMrp ?? product.mrp}</span>
                           )}
                         </div>
-                        {(product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
+                        {isIndia && (product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
                           <span className="text-[11px] font-bold text-emerald-600">
                             {Math.round((((product.displayMrp ?? product.mrp)! - (product.displayPrice ?? product.price)!) / (product.displayMrp ?? product.mrp)!) * 100)}% OFF
                           </span>

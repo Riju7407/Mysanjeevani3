@@ -34,6 +34,8 @@ export async function GET(request: NextRequest) {
           fullName: user.fullName,
           email: user.email,
           phone: user.phone,
+          profileImage: user.profileImage,
+          fullAddress: user.fullAddress,
           role: user.role,
           isVerified: user.isVerified,
           createdAt: user.createdAt,

@@ -83,6 +83,7 @@ function isAyurvedaProduct(product: Product) {
 function AyurvedaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isIndia } = usePreferredCountry();
   const urlCategory = searchParams.get('category') || '';
   const urlSearch = searchParams.get('search') || '';
   const productsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -336,7 +337,7 @@ function AyurvedaContent() {
 
                     {/* Badges */}
                     <div className="absolute inset-0 flex items-start justify-end p-3 pointer-events-none">
-                      {!!(p.mrp && p.mrp > p.price) && (
+                      {!!(p.mrp && p.mrp > p.price) && isIndia && (
                         <span className="text-[11px] font-bold text-emerald-600">
                           {Math.round(((p.mrp! - p.price) / p.mrp!) * 100)}% OFF
                         </span>
@@ -375,7 +376,7 @@ function AyurvedaContent() {
                     {/* Price */}
                     <div className="mb-2 flex items-end justify-between">
                       <span className="text-base font-black text-slate-900">{p.currencySymbol || '₹'}{p.displayPrice ?? p.price}</span>
-                      {(p.displayMrp ?? p.mrp) && (p.displayMrp ?? p.mrp)! > (p.displayPrice ?? p.price) && (
+                      {isIndia && (p.displayMrp ?? p.mrp) && (p.displayMrp ?? p.mrp)! > (p.displayPrice ?? p.price) && (
                         <span className="text-xs text-slate-400 line-through">{p.currencySymbol || '₹'}{p.displayMrp ?? p.mrp}</span>
                       )}
                     </div>

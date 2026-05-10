@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 const OFFERS = [
   { id: 1, title: '20% OFF on all Lab Tests', subtitle: 'Book online & get tested at home', code: 'LAB20', bg: 'from-blue-600 to-blue-400', icon: '🧪', expiry: '31 Dec 2025', cat: 'Lab Tests' },
@@ -24,6 +25,7 @@ const FEATURED_DEALS = [
 
 export default function OffersPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const { isIndia } = usePreferredCountry();
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code).catch(() => {});
@@ -51,13 +53,17 @@ export default function OffersPage() {
             <div key={d.name} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-3xl">{d.icon}</span>
-                <span className="bg-red-100 text-red-700 text-sm font-bold px-2 py-0.5 rounded-full">{d.discount}% OFF</span>
+                {isIndia && (
+                  <span className="bg-red-100 text-red-700 text-sm font-bold px-2 py-0.5 rounded-full">{d.discount}% OFF</span>
+                )}
               </div>
               <h3 className="font-bold text-gray-900 text-sm">{d.name}</h3>
               <p className="text-xs text-gray-500 mt-1">{d.items}</p>
               <div className="flex items-center gap-2 mt-3">
                 <span className="text-xl font-bold text-green-600">₹{d.price}</span>
-                <span className="text-sm text-gray-400 line-through">₹{d.mrp}</span>
+                {isIndia && (
+                  <span className="text-sm text-gray-400 line-through">₹{d.mrp}</span>
+                )}
               </div>
               <button className="mt-3 w-full bg-orange-500 hover:bg-orange-600 text-white py-1.5 rounded-lg text-sm font-semibold transition">
                 Book Now

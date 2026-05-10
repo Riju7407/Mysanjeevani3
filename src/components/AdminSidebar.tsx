@@ -50,6 +50,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8M8 14h5m7 6H6a2 2 0 01-2-2V6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2z" />
     </svg>
   ),
+  support: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-9 8l-1-5a2 2 0 012-2h14a2 2 0 012 2l-1 5m-4-8V6a4 4 0 00-8 0v6" />
+    </svg>
+  ),
   logout: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -76,6 +81,7 @@ export default function AdminSidebar() {
     { label: 'Lab Bookings', href: '/admin/lab-bookings', icon: Icons.orders },
     { label: 'Webhook Events', href: '/admin/thyrocare-webhooks', icon: Icons.reports },
     { label: 'Inquiries', href: '/admin/inquiries', icon: Icons.inquiries },
+    { label: 'Support Review', href: '/admin/support', icon: Icons.support },
     { label: 'Reports', href: '/admin/reports', icon: Icons.reports },
   ];
 

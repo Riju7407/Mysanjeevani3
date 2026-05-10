@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useState, useMemo, useEffect } from 'react';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface WellnessPillar {
   _id: string;
@@ -26,6 +27,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function WellnessPage() {
+  const { isIndia } = usePreferredCountry();
   const [sortOrder, setSortOrder] = useState('featured');
   const [search, setSearch] = useState('');
   const [pillars, setPillars] = useState<WellnessPillar[]>([]);
@@ -190,7 +192,7 @@ export default function WellnessPage() {
                       )}
                       
                       {/* Discount Badge */}
-                      {discount > 0 && (
+                      {isIndia && discount > 0 && (
                         <div className="absolute top-3 right-3">
                           <span className="bg-green-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md">
                             {discount}% OFF
@@ -230,7 +232,7 @@ export default function WellnessPage() {
                       {/* Price */}
                       <div className="mt-3 flex items-center gap-2 py-2 border-t border-gray-100">
                         <span className="text-xl font-bold text-gray-900">₹{pillar.price}</span>
-                        {pillar.mrp && pillar.mrp > pillar.price && (
+                        {isIndia && pillar.mrp && pillar.mrp > pillar.price && (
                           <span className="text-xs text-gray-500 line-through">₹{pillar.mrp}</span>
                         )}
                       </div>

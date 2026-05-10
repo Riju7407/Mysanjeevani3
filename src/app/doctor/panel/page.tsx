@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AgoraConsultationCall from '@/components/AgoraConsultationCall';
 
 interface DoctorUser {
@@ -188,6 +189,7 @@ export default function DoctorPanelPage() {
   };
 
   const isImageUrl = (value?: string) => !!value && /^(https?:\/\/|\/)/i.test(value);
+  const dashboardAvatar = profileImagePreview || profileForm.avatar || doctorProfile?.avatar || '';
 
   const uploadDoctorProfileImage = async (file?: File) => {
     if (!file) return;
@@ -445,7 +447,7 @@ export default function DoctorPanelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-linear-to-b from-slate-50 to-slate-100 flex flex-col">
       <div className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
           <div className="flex items-start justify-between gap-4">
@@ -468,6 +470,24 @@ export default function DoctorPanelPage() {
               >
                 Logout
               </button>
+              <Link
+                href="/profile"
+                className="mt-2 inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700 font-medium hover:bg-emerald-100"
+              >
+                My Profile
+              </Link>
+              <Link
+                href="/profile/support"
+                className="mt-2 inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700 font-medium hover:bg-blue-100"
+              >
+                Support Center
+              </Link>
+              <Link
+                href="/doctor/wallet"
+                className="mt-2 inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-indigo-700 font-medium hover:bg-indigo-100"
+              >
+                💰 My Wallet
+              </Link>
             </div>
           </div>
         </div>
@@ -494,10 +514,10 @@ export default function DoctorPanelPage() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center text-3xl">
-                    {isImageUrl(doctorProfile?.avatar) ? (
-                      <img src={doctorProfile?.avatar} alt={doctorProfile?.name || 'Doctor'} className="w-full h-full object-cover" />
+                    {isImageUrl(dashboardAvatar) ? (
+                      <img src={dashboardAvatar} alt={doctorProfile?.name || 'Doctor'} className="w-full h-full object-cover" />
                     ) : (
-                      doctorProfile?.avatar || '👨‍⚕️'
+                      dashboardAvatar || '👨‍⚕️'
                     )}
                   </div>
                   <div>
@@ -509,13 +529,6 @@ export default function DoctorPanelPage() {
                     </p>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => setShowProfileModal(true)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                >
-                  Edit Profile
-                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
@@ -686,7 +699,7 @@ export default function DoctorPanelPage() {
                 <p className="text-sm text-slate-500">No consultations match the current filters.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] text-sm">
+                  <table className="w-full min-w-190 text-sm">
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-200">
                         <th className="py-2 pr-3 font-semibold">Patient</th>
@@ -808,7 +821,7 @@ export default function DoctorPanelPage() {
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="bg-gradient-to-r from-slate-900 to-slate-700 text-white p-5 rounded-t-2xl flex items-center justify-between">
+            <div className="bg-linear-to-r from-slate-900 to-slate-700 text-white p-5 rounded-t-2xl flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold">Edit Account Profile</h3>
                 <p className="text-xs text-slate-200 mt-1">Professional details visible on doctor panel</p>

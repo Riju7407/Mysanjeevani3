@@ -1117,7 +1117,7 @@ export default function Header() {
                           <>
                             <div className="border-t border-gray-100 my-2"></div>
                             <Link
-                              href="/admin/consultations"
+                              href="/doctor/panel"
                               className="block px-4 py-2 text-emerald-600 hover:bg-emerald-50 font-medium"
                               onClick={() => setIsUserMenuOpen(false)}
                             >
@@ -1339,6 +1339,16 @@ export default function Header() {
               <Link href="/profile" className="block w-full text-center bg-emerald-50 text-emerald-700 py-2.5 rounded-lg font-semibold hover:bg-emerald-100">
                 My Profile
               </Link>
+              {user.role === 'doctor' && (
+                <Link href="/doctor/panel" className="block w-full text-center bg-slate-900 text-white py-2.5 rounded-lg font-semibold hover:bg-slate-800">
+                  Doctor Panel
+                </Link>
+              )}
+              {user.role === 'vendor' && (
+                <Link href="/vendor/dashboard" className="block w-full text-center bg-slate-900 text-white py-2.5 rounded-lg font-semibold hover:bg-slate-800">
+                  Vendor Dashboard
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="block w-full text-center bg-red-50 text-red-700 py-2.5 rounded-lg font-semibold hover:bg-red-100"

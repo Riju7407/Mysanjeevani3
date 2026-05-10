@@ -9,6 +9,17 @@ interface VendorInfo {
   _id: string;
   vendorName: string;
   email: string;
+  phone?: string;
+  businessType?: string;
+  description?: string;
+  logo?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    country?: string;
+  };
   status: string;
   rating?: number;
   totalOrders?: number;
@@ -30,6 +41,7 @@ interface Product {
   diseaseCategory?: string;
   diseaseSubcategory?: string;
   productType?: string;
+  extraCategoryPaths?: string[][];
   benefit?: string;
   requiresPrescription?: boolean;
   description?: string;
@@ -274,6 +286,30 @@ function extractPublicIdFromUrl(url: string): string | null {
   }
 }
 
+function formatVendorAddress(address?: VendorInfo['address']) {
+  if (!address) return 'Not provided';
+
+  const parts = [address.street, address.city, address.state, address.pincode, address.country]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean);
+
+  return parts.length > 0 ? parts.join(', ') : 'Not provided';
+}
+
+function buildProfileForm(vendor?: VendorInfo | null) {
+  return {
+    vendorName: vendor?.vendorName || '',
+    phone: vendor?.phone || '',
+    businessType: vendor?.businessType || 'pharmacy',
+    description: vendor?.description || '',
+    street: vendor?.address?.street || '',
+    city: vendor?.address?.city || '',
+    state: vendor?.address?.state || '',
+    pincode: vendor?.address?.pincode || '',
+    country: vendor?.address?.country || 'India',
+  };
+}
+
 export default function VendorDashboard() {
   const router = useRouter();
   const [vendorInfo, setVendorInfo] = useState<VendorInfo | null>(null);
@@ -295,6 +331,7 @@ export default function VendorDashboard() {
     category: '',
     categoryPath: [] as string[],
     categories: [] as string[],
+    extraCategoryPaths: [] as string[][],
     subcategory: '',
     potency: '',
     quantity: '',
@@ -328,6 +365,7 @@ export default function VendorDashboard() {
     category: '',
     categoryPath: [] as string[],
     categories: [] as string[],
+    extraCategoryPaths: [] as string[][],
     subcategory: '',
     potency: '',
     quantity: '',
@@ -348,6 +386,13 @@ export default function VendorDashboard() {
   const [imageUrl, setImageUrl] = useState('');
   const [selectedEditProductImage, setSelectedEditProductImage] = useState<File | null>(null);
   const [editImagePreviewUrl, setEditImagePreviewUrl] = useState<string>('');
+  const [profileForm, setProfileForm] = useState(buildProfileForm());
+  const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [profileImagePreviewUrl, setProfileImagePreviewUrl] = useState('');
+  const [profileImageUploading, setProfileImageUploading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
   const [categoryConfig, setCategoryConfig] = useState<DynamicCategoryConfig | null>(null);
   const { uploadImage, uploading: imageUploading, error: uploadError, previewUrl } = useImageUpload();
 
@@ -416,6 +461,24 @@ export default function VendorDashboard() {
     return [];
   };
 
+  const getExtraPathOptions = (productType: string, path: string[], levelIdx: number): string[] => {
+    if (levelIdx === 0) {
+      return getNodeChildren(productType, categoryTree);
+    }
+
+    const parent = path[levelIdx - 1];
+    if (!parent) return [];
+
+    const treeOptions = getNodeChildren(parent, categoryTree);
+    if (treeOptions.length > 0) return treeOptions;
+
+    if (levelIdx === 1) {
+      return getSubcategoryOptionsForType(productType, path[0] || '');
+    }
+
+    return [];
+  };
+
   const findCategoryPathFromTree = (productType: string, targetCategory: string): string[] => {
     const productTypesRoot = categoryTree.find((n: any) => n.name === 'Product Types');
     if (!productTypesRoot || !productTypesRoot.children) return [targetCategory];
@@ -450,8 +513,11 @@ export default function VendorDashboard() {
 
     const vendorData = JSON.parse(info);
     setVendorInfo(vendorData);
+    setProfileForm(buildProfileForm(vendorData));
+    setProfileImageUrl(vendorData.logo || '');
     fetchProducts(vendorData._id);
     fetchVendorOrders(vendorData._id);
+    void fetchVendorProfile(vendorData._id);
   }, [router]);
 
   useEffect(() => {
@@ -485,6 +551,130 @@ export default function VendorDashboard() {
       console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVendorProfile = async (vendorId: string) => {
+    try {
+      const response = await fetch(`/api/vendor/profile?vendorId=${vendorId}`, {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data?.vendor) {
+        setVendorInfo(data.vendor);
+        setProfileForm(buildProfileForm(data.vendor));
+        setProfileImageUrl(data.vendor.logo || '');
+        localStorage.setItem('vendorInfo', JSON.stringify(data.vendor));
+        window.dispatchEvent(new Event('storage'));
+      }
+    } catch (error) {
+      console.error('Error fetching vendor profile:', error);
+    }
+  };
+
+  const uploadVendorProfileImage = async (file?: File) => {
+    if (!file) return;
+
+    setProfileError('');
+
+    if (!['image/jpeg', 'image/jpg'].includes(file.type)) {
+      setProfileError('Please select a JPG image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileError('Image size must be less than 5MB');
+      return;
+    }
+
+    setProfileImageUploading(true);
+    const preview = URL.createObjectURL(file);
+    setProfileImagePreviewUrl(preview);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/vendor/upload-profile-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data?.imageUrl) {
+        throw new Error(data?.error || 'Image upload failed');
+      }
+
+      setProfileImageUrl(data.imageUrl);
+      setProfileImagePreviewUrl('');
+      setProfileError('');
+    } catch (error: any) {
+      setProfileError(error?.message || 'Image upload failed');
+    } finally {
+      setProfileImageUploading(false);
+    }
+  };
+
+  const handleProfileFieldChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setProfileForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateVendorProfile = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!vendorInfo?._id) {
+      setProfileError('Vendor information missing. Please login again.');
+      return;
+    }
+
+    setProfileSaving(true);
+    setProfileError('');
+    setProfileSuccess('');
+
+    try {
+      const response = await fetch('/api/vendor/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: vendorInfo._id,
+          vendorName: profileForm.vendorName,
+          phone: profileForm.phone,
+          businessType: profileForm.businessType,
+          description: profileForm.description,
+          logo: profileImageUrl || vendorInfo.logo || '',
+          street: profileForm.street,
+          city: profileForm.city,
+          state: profileForm.state,
+          pincode: profileForm.pincode,
+          country: profileForm.country,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update profile');
+
+      const updatedVendor = data.vendor || vendorInfo;
+      setVendorInfo(updatedVendor);
+      setProfileForm(buildProfileForm(updatedVendor));
+      setProfileImageUrl(updatedVendor.logo || '');
+      setProfileImagePreviewUrl('');
+      localStorage.setItem('vendorInfo', JSON.stringify(updatedVendor));
+      window.dispatchEvent(new Event('storage'));
+      setProfileSuccess('Profile updated successfully');
+    } catch (error: any) {
+      setProfileError(error?.message || 'Failed to update profile');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -609,6 +799,7 @@ export default function VendorDashboard() {
           category: newProduct.categoryPath[0] || undefined,
           subcategory: newProduct.categoryPath[1] || newProduct.subcategory || undefined,
           categories: newProduct.categoryPath,
+          extraCategoryPaths: (newProduct.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0),
           popularSection: newProduct.popularSection || 'None',
           diseasePaths: newProduct.diseasePaths || [],
           diseaseCategory: newProduct.diseasePaths?.[0]?.[0] || newProduct.diseaseCategory || undefined,
@@ -639,8 +830,10 @@ export default function VendorDashboard() {
         category: '',
         categoryPath: [],
         categories: [],
+        extraCategoryPaths: [],
         subcategory: '',
-        potency: '',
+        potency: ''
+
         quantity: '',
         quantityUnit: 'None',
         diseasePaths: [],
@@ -701,6 +894,7 @@ export default function VendorDashboard() {
       category: normalizedCategory,
       categoryPath: editCategoryPath,
       categories: (product as any).categories || [],
+      extraCategoryPaths: Array.isArray((product as any).extraCategoryPaths) ? (product as any).extraCategoryPaths : [],
       subcategory: product.subcategory || (
         isHomeopathy ? getDefaultSubcategoryForTypeDynamic(inferredProductType, normalizedCategory)
           : isAyurveda ? getDefaultSubcategoryForTypeDynamic(inferredProductType, normalizedCategory)
@@ -788,6 +982,7 @@ export default function VendorDashboard() {
           productType: editProduct.productType,
           category: editProduct.categoryPath?.[0] || editProduct.category,
           categories: editProduct.categoryPath && editProduct.categoryPath.length > 0 ? editProduct.categoryPath : editProduct.category ? [editProduct.category] : [],
+          extraCategoryPaths: (editProduct.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0),
           subcategory: editProduct.categoryPath?.[1] || editProduct.subcategory || undefined,
           potency: editProduct.potency || undefined,
           quantityUnit: editProduct.quantityUnit || 'None',
@@ -867,6 +1062,8 @@ export default function VendorDashboard() {
 
   if (!vendorInfo) return <div className="flex items-center justify-center h-screen">Loading...</div>;
 
+  const profileDisplayImage = profileImagePreviewUrl || profileImageUrl || vendorInfo.logo || '';
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -874,22 +1071,67 @@ export default function VendorDashboard() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">{vendorInfo.vendorName}</h1>
-              <p className="text-gray-600 text-sm mt-1">
-                Status: <span className="font-semibold text-emerald-600">{vendorInfo.status}</span>
-              </p>
-              {vendorInfo.status === 'verified' && (
-                <p className="text-gray-600 text-sm">
-                  Rating: ⭐ {vendorInfo.rating || 'Not rated yet'}
-                </p>
-              )}
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 overflow-hidden rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                    {profileDisplayImage ? (
+                      <img src={profileDisplayImage} alt={vendorInfo.vendorName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-2xl text-emerald-600 font-bold">{vendorInfo.vendorName?.charAt(0) || 'V'}</span>
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-800">{vendorInfo.vendorName}</h1>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Status: <span className="font-semibold text-emerald-600">{vendorInfo.status}</span>
+                  </p>
+                  {vendorInfo.status === 'verified' && (
+                    <p className="text-gray-600 text-sm">
+                      Rating: ⭐ {vendorInfo.rating || 'Not rated yet'}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-            >
-              Logout
-            </button>
+            <div className="flex flex-col items-end gap-3">
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
+                Logout
+              </button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  My Profile
+                </Link>
+                <Link
+                  href="/profile/support"
+                  className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Support Center
+                </Link>
+                <Link
+                  href="/vendor/wallet"
+                  className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                >
+                  💰 My Wallet
+                </Link>
+                <button
+                  onClick={() => setTab('orders')}
+                  className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                >
+                  My Orders
+                </button>
+                <Link
+                  href="/medicines"
+                  className="inline-flex items-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+                >
+                  Browse Medicines
+                </Link>
+              </div>
+            </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
@@ -950,6 +1192,204 @@ export default function VendorDashboard() {
             Analytics
           </button>
         </div>
+
+        {tab === 'profile' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Profile Information</h2>
+                <div className="space-y-5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-20 w-20 overflow-hidden rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                      {profileDisplayImage ? (
+                        <img src={profileDisplayImage} alt={vendorInfo.vendorName} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-3xl text-emerald-600 font-bold">{vendorInfo.vendorName?.charAt(0) || 'V'}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{vendorInfo.vendorName}</h3>
+                      <p className="text-sm text-gray-600">{vendorInfo.email}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="font-medium text-gray-900">{vendorInfo.phone || 'Not provided'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500">Business Type</p>
+                    <p className="font-medium text-gray-900 capitalize">{vendorInfo.businessType || 'Not provided'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500">Full Address</p>
+                    <p className="font-medium text-gray-900 leading-6">{formatVendorAddress(vendorInfo.address)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500">Description</p>
+                    <p className="font-medium text-gray-900 leading-6">
+                      {vendorInfo.description || 'No description added yet'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
+                  <span className="text-xs font-semibold text-gray-500">JPG only for profile image</span>
+                </div>
+
+                <form onSubmit={handleUpdateVendorProfile} className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="md:col-span-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">Profile Image</label>
+                      <div className="flex items-center gap-4">
+                        <div className="h-24 w-24 overflow-hidden rounded-full bg-white border border-slate-200 flex items-center justify-center">
+                          {profileDisplayImage ? (
+                            <img src={profileDisplayImage} alt="Vendor profile" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-2xl text-slate-400">👤</span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,image/jpeg"
+                            onChange={(e) => uploadVendorProfileImage(e.target.files?.[0] || undefined)}
+                            disabled={profileImageUploading || profileSaving}
+                            className="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                          />
+                          <p className="mt-2 text-xs text-slate-500">Upload a JPG image first. It will be saved to Cloudinary and then stored in your profile.</p>
+                          {profileImageUploading && <p className="mt-2 text-xs font-medium text-blue-600">Uploading image...</p>}
+                          {profileError && <p className="mt-2 text-xs font-medium text-red-600">{profileError}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      name="vendorName"
+                      value={profileForm.vendorName}
+                      onChange={handleProfileFieldChange}
+                      placeholder="Vendor / Shop Name"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={profileForm.phone}
+                      onChange={handleProfileFieldChange}
+                      placeholder="Phone Number"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    />
+                    <select
+                      name="businessType"
+                      value={profileForm.businessType}
+                      onChange={handleProfileFieldChange}
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    >
+                      <option value="pharmacy">Pharmacy</option>
+                      <option value="clinic">Clinic</option>
+                      <option value="hospital">Hospital</option>
+                      <option value="lab">Lab</option>
+                      <option value="supplier">Supplier</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <input
+                      type="text"
+                      name="country"
+                      value={profileForm.country}
+                      onChange={handleProfileFieldChange}
+                      placeholder="Country"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="street"
+                      value={profileForm.street}
+                      onChange={handleProfileFieldChange}
+                      placeholder="Street Address"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-2"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="city"
+                      value={profileForm.city}
+                      onChange={handleProfileFieldChange}
+                      placeholder="City"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="state"
+                      value={profileForm.state}
+                      onChange={handleProfileFieldChange}
+                      placeholder="State"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="pincode"
+                      value={profileForm.pincode}
+                      onChange={handleProfileFieldChange}
+                      placeholder="Pincode"
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      required
+                    />
+                    <textarea
+                      name="description"
+                      value={profileForm.description}
+                      onChange={handleProfileFieldChange}
+                      placeholder="Business description"
+                      rows={4}
+                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-2"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="submit"
+                      disabled={profileSaving || profileImageUploading}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white px-6 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60"
+                    >
+                      {profileSaving ? 'Saving Profile...' : 'Save Profile'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileForm(buildProfileForm(vendorInfo));
+                        setProfileImageUrl(vendorInfo.logo || '');
+                        setProfileImagePreviewUrl('');
+                        setProfileError('');
+                        setProfileSuccess('');
+                      }}
+                      className="border border-slate-300 text-slate-700 px-6 py-2 rounded-lg hover:bg-slate-50 font-medium transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  {profileSuccess && (
+                    <p className="text-sm font-medium text-emerald-700">{profileSuccess}</p>
+                  )}
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Overview Tab */}
         {tab === 'overview' && (
@@ -1108,6 +1548,7 @@ export default function VendorDashboard() {
                           productType,
                           category: '',
                           categoryPath: [],
+                          extraCategoryPaths: [],
                           subcategory: '',
                         });
                       }}
@@ -1172,6 +1613,58 @@ export default function VendorDashboard() {
                         </>
                       );
                     })()}
+                    <div className="md:col-span-3 space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
+                      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                        <div>
+                          <label className="text-sm font-semibold text-slate-800">Additional Category Paths (Optional)</label>
+                          <p className="text-xs text-slate-500">Add one or more extra category &gt; subcategory &gt; next category paths without changing the main selector above.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNewProduct({ ...newProduct, extraCategoryPaths: [...(newProduct.extraCategoryPaths || []), ['', '', '']] })}
+                          className="text-emerald-700 hover:text-emerald-900 text-sm font-medium"
+                        >
+                          + Add Path
+                        </button>
+                      </div>
+                      {(newProduct.extraCategoryPaths || []).map((path, idx) => (
+                        <div key={`extra-category-${idx}`} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                          {[0, 1, 2].map((levelIdx) => {
+                            const options = getExtraPathOptions(newProduct.productType || 'Generic Medicine', path, levelIdx);
+                            return (
+                              <select
+                                key={`extra-path-${idx}-${levelIdx}`}
+                                value={path[levelIdx] || ''}
+                                onChange={(e) => {
+                                  const updated = [...(newProduct.extraCategoryPaths || [])];
+                                  const nextPath = path.slice(0, levelIdx);
+                                  if (e.target.value) nextPath[levelIdx] = e.target.value;
+                                  updated[idx] = nextPath;
+                                  setNewProduct({ ...newProduct, extraCategoryPaths: updated });
+                                }}
+                                className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                              >
+                                <option value="">{levelIdx === 0 ? 'Extra Category' : levelIdx === 1 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
+                                {options.map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...(newProduct.extraCategoryPaths || [])];
+                              updated.splice(idx, 1);
+                              setNewProduct({ ...newProduct, extraCategoryPaths: updated });
+                            }}
+                            className="text-sm text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                     <div className="md:col-span-3 space-y-3">
                       <div className="flex items-center justify-between mb-2">
                         <label className="text-sm font-semibold text-slate-800">Diseases / Conditions (Optional)</label>
@@ -1446,6 +1939,7 @@ export default function VendorDashboard() {
                           productType,
                           category: '',
                           categoryPath: [],
+                          extraCategoryPaths: [],
                           subcategory: '',
                         });
                       }}
@@ -1510,6 +2004,58 @@ export default function VendorDashboard() {
                         </>
                       );
                     })()}
+                    <div className="md:col-span-3 space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
+                      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                        <div>
+                          <label className="text-sm font-semibold text-slate-800">Additional Category Paths (Optional)</label>
+                          <p className="text-xs text-slate-500">Add one or more extra category &gt; subcategory &gt; next category paths without changing the main selector above.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditProduct({ ...editProduct, extraCategoryPaths: [...(editProduct.extraCategoryPaths || []), ['', '', '']] })}
+                          className="text-emerald-700 hover:text-emerald-900 text-sm font-medium"
+                        >
+                          + Add Path
+                        </button>
+                      </div>
+                      {(editProduct.extraCategoryPaths || []).map((path, idx) => (
+                        <div key={`extra-category-edit-${idx}`} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                          {[0, 1, 2].map((levelIdx) => {
+                            const options = getExtraPathOptions(editProduct.productType || 'Generic Medicine', path, levelIdx);
+                            return (
+                              <select
+                                key={`extra-path-edit-${idx}-${levelIdx}`}
+                                value={path[levelIdx] || ''}
+                                onChange={(e) => {
+                                  const updated = [...(editProduct.extraCategoryPaths || [])];
+                                  const nextPath = path.slice(0, levelIdx);
+                                  if (e.target.value) nextPath[levelIdx] = e.target.value;
+                                  updated[idx] = nextPath;
+                                  setEditProduct({ ...editProduct, extraCategoryPaths: updated });
+                                }}
+                                className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                              >
+                                <option value="">{levelIdx === 0 ? 'Extra Category' : levelIdx === 1 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
+                                {options.map((opt) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            );
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...(editProduct.extraCategoryPaths || [])];
+                              updated.splice(idx, 1);
+                              setEditProduct({ ...editProduct, extraCategoryPaths: updated });
+                            }}
+                            className="text-sm text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                     <div className="md:col-span-3 space-y-3">
                       <div className="flex items-center justify-between mb-2">
                         <label className="text-sm font-semibold text-slate-800">Diseases / Conditions (Optional)</label>

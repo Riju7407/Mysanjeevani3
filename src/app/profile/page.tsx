@@ -6,6 +6,10 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 
+function isImageUrl(url?: string) {
+  return !!url && /^https?:\/\//i.test(url);
+}
+
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -19,8 +23,30 @@ export default function ProfilePage() {
       router.push('/login');
       return;
     }
-    setUser(JSON.parse(userStr));
-    setLoading(false);
+
+    const parsedUser = JSON.parse(userStr);
+    const userId = String(parsedUser?.id || parsedUser?._id || '').trim();
+
+    if (!userId) {
+      router.push('/login');
+      return;
+    }
+
+    fetch(`/api/user/profile?id=${encodeURIComponent(userId)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data?.user) {
+          throw new Error(data?.error || 'Failed to load profile');
+        }
+
+        const mergedUser = { ...parsedUser, ...data.user };
+        setUser(mergedUser);
+        localStorage.setItem('user', JSON.stringify(mergedUser));
+      })
+      .catch(() => {
+        setUser(parsedUser);
+      })
+      .finally(() => setLoading(false));
   }, [router]);
 
   const handleLogout = () => {
@@ -48,22 +74,26 @@ export default function ProfilePage() {
       <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Profile Header */}
-          <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-lg p-8 mb-8">
+          <div className="bg-linear-to-r from-emerald-600 to-emerald-500 text-white rounded-lg p-8 mb-8">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-                <svg
-                  className="w-12 h-12 text-emerald-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
+              <div className="w-24 h-24 bg-white rounded-full overflow-hidden border-4 border-white/20 flex items-center justify-center">
+                {isImageUrl(user?.profileImage) ? (
+                  <img src={user.profileImage} alt={user?.fullName || 'Profile'} className="w-full h-full object-cover" />
+                ) : (
+                  <svg
+                    className="w-12 h-12 text-emerald-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                )}
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{user?.fullName}</h1>
@@ -81,12 +111,20 @@ export default function ProfilePage() {
                   <h2 className="text-2xl font-bold text-gray-900">
                     Profile Information
                   </h2>
-                  <Link
-                    href="/profile/edit"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition font-medium"
-                  >
-                    Edit Profile
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/profile/edit"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition font-medium"
+                    >
+                      Edit Profile
+                    </Link>
+                    <Link
+                      href="/profile/support"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition font-medium"
+                    >
+                      Support Center
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="space-y-6">
@@ -113,6 +151,15 @@ export default function ProfilePage() {
                     </label>
                     <p className="text-lg text-gray-900">
                       {user?.phone || 'Not provided'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">
+                      Address
+                    </label>
+                    <p className="text-lg text-gray-900 whitespace-pre-line">
+                      {user?.fullAddress || 'Not provided'}
                     </p>
                   </div>
 
@@ -195,6 +242,28 @@ export default function ProfilePage() {
                   >
                     Edit Profile
                   </Link>
+                  {user?.role === 'doctor' && (
+                    <Link
+                      href="/doctor/panel"
+                      className="block w-full text-center bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-lg transition"
+                    >
+                      Doctor Panel
+                    </Link>
+                  )}
+                  {user?.role === 'vendor' && (
+                    <Link
+                      href="/vendor/dashboard"
+                      className="block w-full text-center bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-lg transition"
+                    >
+                      Vendor Dashboard
+                    </Link>
+                  )}
+                  <Link
+                    href="/profile/support"
+                    className="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition"
+                  >
+                    Support Center
+                  </Link>
                   <Link
                     href="/orders"
                     className="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition"
@@ -217,7 +286,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Account Stats */}
-              <div className="bg-gradient-to-br from-emerald-50 to-orange-50 rounded-lg p-6 border border-emerald-200">
+              <div className="bg-linear-to-br from-emerald-50 to-orange-50 rounded-lg p-6 border border-emerald-200">
                 <h3 className="text-lg font-bold mb-4 text-gray-900">
                   Account Stats
                 </h3>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface Product {
   _id: string;
@@ -149,6 +150,7 @@ const toLineItems = (value?: string): string[] =>
 export default function MedicineDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { isIndia } = usePreferredCountry();
   const productId = params?.id;
 
   useEffect(() => {
@@ -386,9 +388,9 @@ export default function MedicineDetailsPage() {
   const discountPercent = useMemo(() => {
     const price = product?.displayPrice ?? product?.price;
     const mrp = product?.displayMrp ?? product?.mrp;
-    if (!mrp || !price || mrp <= price) return 0;
+    if (!isIndia || !mrp || !price || mrp <= price) return 0;
     return Math.round(((mrp - price) / mrp) * 100);
-  }, [product]);
+  }, [isIndia, product]);
 
   const safetyItems = useMemo(() => toLineItems(product?.safetyInformation), [product?.safetyInformation]);
   const specificationItems = useMemo(() => toLineItems(product?.specifications), [product?.specifications]);
@@ -892,7 +894,7 @@ export default function MedicineDetailsPage() {
                   <div className="mb-6 bg-gray-50 rounded-lg p-6">
                     <div className="flex items-baseline gap-3 mb-2">
                       <span className="text-4xl font-bold text-slate-900">{product.currencySymbol || '₹'}{product.displayPrice ?? product.price}</span>
-                      {(product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
+                      {isIndia && (product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
                         <>
                           <span className="text-xl text-slate-400 line-through">{product.currencySymbol || '₹'}{product.displayMrp ?? product.mrp}</span>
                           <span className="text-lg font-bold text-emerald-600">
@@ -1460,7 +1462,7 @@ export default function MedicineDetailsPage() {
                               {(() => {
                                 const mrp = relProduct.displayMrp ?? relProduct.mrp;
                                 const price = relProduct.displayPrice ?? relProduct.price;
-                                return mrp && price && mrp > price ? (
+                                return isIndia && mrp && price && mrp > price ? (
                                   <>
                                     <span className="text-xs text-slate-400 line-through">{relProduct.currencySymbol || '₹'}{mrp}</span>
                                     <span className="text-xs font-bold text-emerald-600">

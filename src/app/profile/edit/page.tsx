@@ -6,14 +6,21 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 
+function isImageUrl(url?: string) {
+  return !!url && /^https?:\/\//i.test(url);
+}
+
 export default function EditProfilePage() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
+    fullAddress: '',
+    profileImage: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
@@ -31,6 +38,8 @@ export default function EditProfilePage() {
       fullName: user.fullName || '',
       email: user.email || '',
       phone: user.phone || '',
+      fullAddress: user.fullAddress || '',
+      profileImage: user.profileImage || '',
     });
     setLoading(false);
   }, [router]);
@@ -42,6 +51,53 @@ export default function EditProfilePage() {
       [name]: value,
     }));
     setError('');
+  };
+
+  const uploadProfileImage = async (file?: File) => {
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Please select a JPG, JPEG, PNG, or WEBP image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    setFormData((prev) => ({ ...prev, profileImage: preview }));
+    setImageUploading(true);
+    setError('');
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('image', file);
+
+      const response = await fetch('/api/user/upload-profile-image', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Image upload failed');
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        profileImage: data.imageUrl,
+      }));
+      setSuccess('Profile image uploaded successfully. Save changes to persist it.');
+    } catch (uploadError: any) {
+      setFormData((prev) => ({ ...prev, profileImage: '' }));
+      setError(uploadError.message || 'Image upload failed');
+    } finally {
+      setImageUploading(false);
+      URL.revokeObjectURL(preview);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -135,6 +191,34 @@ export default function EditProfilePage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Profile Image
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-200 overflow-hidden flex items-center justify-center">
+                    {isImageUrl(formData.profileImage) ? (
+                      <img src={formData.profileImage} alt="Profile preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-emerald-700 font-bold text-xl">
+                        {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : 'U'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={(e) => uploadProfileImage(e.target.files?.[0] || undefined)}
+                      disabled={imageUploading || saving}
+                      className="block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-white hover:file:bg-emerald-700"
+                    />
+                    <p className="mt-2 text-xs text-gray-500">Upload an image first. It will be stored in Cloudinary and saved to your profile when you submit.</p>
+                    {imageUploading && <p className="mt-1 text-xs text-blue-600">Uploading image...</p>}
+                  </div>
+                </div>
+              </div>
+
               {/* Full Name */}
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -182,11 +266,29 @@ export default function EditProfilePage() {
                 />
               </div>
 
+              <div>
+                <label htmlFor="fullAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                  Address
+                </label>
+                <textarea
+                  id="fullAddress"
+                  name="fullAddress"
+                  value={formData.fullAddress}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, fullAddress: e.target.value }));
+                    setError('');
+                  }}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="Enter your full address"
+                />
+              </div>
+
               {/* Buttons */}
               <div className="flex gap-4 pt-6">
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || imageUploading}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}

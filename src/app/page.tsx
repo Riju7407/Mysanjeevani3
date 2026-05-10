@@ -11,6 +11,7 @@ import LeftSideCarousel from '@/components/LeftSideCarousel';
 import PrimaryServicesCarousel from '@/components/PrimaryServicesCarousel';
 import HealthConcernCarousel from '@/components/HealthConcernCarousel';
 import FeaturedProductsSection from '@/components/FeaturedProductsSection';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface Product {
   _id: string;
@@ -67,6 +68,7 @@ function PopularProductsDisplay({
   onBuyNow,
   onProductClick,
 }: PopularSectionProps) {
+  const { isIndia } = usePreferredCountry();
   const themes: Record<string, {
     panel: string;
     ring: string;
@@ -108,6 +110,7 @@ function PopularProductsDisplay({
   const isCompactPopularCard = true;
 
   const discountPercent = (product: Product) => {
+    if (!isIndia) return 0;
     const displayPrice = product.displayPrice ?? product.price;
     const displayMrp = product.displayMrp ?? product.mrp;
     if (!displayMrp || displayMrp <= displayPrice) return 0;
@@ -221,11 +224,11 @@ function PopularProductsDisplay({
                   <div className={`flex items-end justify-between ${isCompactPopularCard ? 'mb-2' : 'mb-3'}`}>
                     <div className="flex items-baseline gap-2">
                       <span className={`${isCompactPopularCard ? 'text-base' : 'text-lg'} font-black text-slate-900`}>{product.currencySymbol || '₹'}{product.displayPrice ?? product.price}</span>
-                      {(product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
+                      {isIndia && (product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
                         <span className="text-xs text-slate-400 line-through">{product.currencySymbol || '₹'}{product.displayMrp ?? product.mrp}</span>
                       )}
                     </div>
-                    {(product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
+                    {isIndia && (product.displayMrp ?? product.mrp) && (product.displayMrp ?? product.mrp)! > (product.displayPrice ?? product.price) && (
                       <span className="text-[11px] font-bold text-emerald-600">{discountPercent(product)}% OFF</span>
                     )}
                   </div>

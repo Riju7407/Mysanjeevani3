@@ -167,6 +167,8 @@ export default function DoctorConsultationPage() {
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [isOTPVerified, setIsOTPVerified] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>('IN');
+  const [emergencyAcknowledged, setEmergencyAcknowledged] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const redirectToLogin = () => {
     if (typeof window === 'undefined') return;
@@ -239,6 +241,12 @@ export default function DoctorConsultationPage() {
   }, []);
 
   const openBooking = (doctor: Doctor) => {
+    // Check if emergency alert is acknowledged
+    if (!emergencyAcknowledged || !termsAccepted) {
+      setError('⚠️ Please acknowledge the emergency notice and accept the Teleconsultation Terms to proceed.');
+      return;
+    }
+
     const user = getUserData();
     if (!user) {
       redirectToLogin();
@@ -580,12 +588,49 @@ export default function DoctorConsultationPage() {
         </div>
         {activeTab === 'find' && (
           <>
+            {/* Emergency Alert Notice */}
+            <div className="mb-8 bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
+              <div className="flex items-start gap-4">
+                <span className="text-2xl flex-shrink-0">⚠️</span>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-red-800 mb-3">Not for Emergencies</h2>
+                  <p className="text-red-700 text-sm mb-4 leading-relaxed">
+                    This service is <strong>NOT for life-threatening emergencies</strong>. If you are experiencing a medical emergency (e.g., chest pain, difficulty breathing, severe bleeding), please <strong>visit the nearest hospital or call an ambulance immediately</strong>.
+                  </p>
+                  <div className="space-y-3 bg-white rounded p-4 border border-red-200">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={emergencyAcknowledged}
+                        onChange={(e) => setEmergencyAcknowledged(e.target.checked)}
+                        className="mt-1 w-5 h-5 rounded border-red-300 accent-red-600 flex-shrink-0"
+                      />
+                      <span className="text-sm text-red-700 leading-relaxed">
+                        I understand and confirm that this is a <strong>tele-consultation</strong> and <strong>NOT for emergency use</strong>.
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-1 w-5 h-5 rounded border-red-300 accent-red-600 flex-shrink-0"
+                      />
+                      <span className="text-sm text-red-700 leading-relaxed">
+                        I agree to the <strong>Teleconsultation Terms of Service</strong>.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Results Header */}
             <div className="mb-8">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">
-                    {selectedDept === 'All' ? 'Find a Doctor (Emergency Support May Not Be Available Anytime)' : selectedDept}
+                    {selectedDept === 'All' ? 'Find a Doctor' : selectedDept}
                   </h1>
                   <p className="text-gray-600 mt-1 text-sm">
                     {sortedDoctors.length} {sortedDoctors.length === 1 ? 'doctor' : 'doctors'} available
