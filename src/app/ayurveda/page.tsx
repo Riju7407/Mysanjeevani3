@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 const CATEGORIES = ['All', 'Himalaya', 'Organic India', 'Baidyanath', 'Dabur', 'Zandu', 'Charak', 'Aimil', 'Ras & Sindoor', 'Bhasm & Pishti', 'Vati, Gutika & Guggulu', 'Asava Arishta & Kadha', 'Loha & Mandur', 'Churan, Powder, Avaleha & Pak', 'Tailam & Ghrita', 'Chyawanprash', 'Honey', 'Digestives', 'Herbal & Vegetable Juice'];
 const SORT_OPTIONS = [
