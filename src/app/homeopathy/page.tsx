@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface HomeopathyProduct {
   _id: string;
