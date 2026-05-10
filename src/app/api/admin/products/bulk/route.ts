@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
-import xlsx from 'xlsx';
+import * as XLSX from 'xlsx';
 
 function normalizeHeaderKey(key: string) {
   return key.trim().toLowerCase();
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest) {
     if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
 
     const buffer = await file.arrayBuffer();
-    const wb = xlsx.read(Buffer.from(buffer), { type: 'buffer' });
+    const wb = XLSX.read(Buffer.from(buffer), { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
-    const rows: Record<string, any>[] = xlsx.utils.sheet_to_json(ws, { defval: '' });
+    const rows: Record<string, any>[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
     const created: any[] = [];
     const errors: any[] = [];
