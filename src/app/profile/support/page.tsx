@@ -1,8 +1,6 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -21,7 +19,7 @@ function getUserFromStorage() {
   }
 }
 
-export default function ProfileSupportPage() {
+function ProfileSupportContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get('tab') as TabName) || 'returns';
@@ -454,5 +452,23 @@ export default function ProfileSupportPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function ProfileSupportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex flex-col">
+          <Header />
+          <div className="flex-1 flex items-center justify-center">
+            <p>Loading support center...</p>
+          </div>
+          <Footer />
+        </div>
+      }
+    >
+      <ProfileSupportContent />
+    </Suspense>
   );
 }
