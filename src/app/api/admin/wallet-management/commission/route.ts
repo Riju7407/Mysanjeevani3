@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest) {
       }
 
       const existingVendor = commission.vendorCommissions.find(
-        (vc) => vc.vendorId.toString() === vendorId
+        (vc: any) => vc.vendorId.toString() === vendorId
       );
 
       if (existingVendor) {
