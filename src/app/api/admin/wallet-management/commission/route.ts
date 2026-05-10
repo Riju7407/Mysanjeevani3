@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest) {
       }
 
       const existingDoctor = commission.doctorCommissions.find(
-        (dc) => dc.doctorId.toString() === doctorId
+        (dc: any) => dc.doctorId.toString() === doctorId
       );
 
       if (existingDoctor) {
