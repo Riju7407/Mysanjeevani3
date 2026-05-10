@@ -832,7 +832,7 @@ export default function VendorDashboard() {
         categories: [],
         extraCategoryPaths: [],
         subcategory: '',
-        potency: ''
+        potency: '',
 
         quantity: '',
         quantityUnit: 'None',
