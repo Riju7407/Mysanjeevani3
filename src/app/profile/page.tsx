@@ -271,6 +271,12 @@ export default function ProfilePage() {
                     My Orders
                   </Link>
                   <Link
+                    href="/prescriptions"
+                    className="block w-full text-center bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition"
+                  >
+                    My Prescriptions
+                  </Link>
+                  <Link
                     href="/medicines"
                     className="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg transition"
                   >

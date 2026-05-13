@@ -7,10 +7,34 @@ const prescriptionSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Doctor',
+      required: true,
+    },
+    consultationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'DoctorConsultation',
+      required: true,
+    },
     prescriptionFile: String, // URL to uploaded file
-    doctorName: String,
+    doctorName: {
+      type: String,
+      required: true,
+    },
+    doctorRegistrationNumber: {
+      type: String,
+      default: '',
+    },
+    doctorAddress: {
+      type: String,
+      default: '',
+    },
     hospitalName: String,
-    issueDate: Date,
+    issueDate: {
+      type: Date,
+      default: Date.now,
+    },
     expiryDate: Date,
     medicines: [
       {
@@ -20,6 +44,14 @@ const prescriptionSchema = new mongoose.Schema(
         duration: String,
       },
     ],
+    diagnosis: {
+      type: String,
+      default: '',
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['active', 'expired', 'used'],

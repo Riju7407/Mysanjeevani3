@@ -2,6 +2,54 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Doctor } from '@/lib/models/Doctor';
 
+// GET /api/doctor/profile?userId=xxx or ?doctorId=xxx
+// Fetches the doctor profile
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+
+    // Try to get userId or doctorId from query parameters
+    let userId = request.nextUrl.searchParams.get('userId');
+    const doctorId = request.nextUrl.searchParams.get('doctorId');
+    
+    // If userId is provided, fetch by userId
+    if (userId) {
+      const doctor = await Doctor.findOne({ userId }).lean();
+      
+      if (!doctor) {
+        return NextResponse.json({ error: 'Doctor profile not found. Please complete your profile setup.' }, { status: 404 });
+      }
+
+      return NextResponse.json({ message: 'Doctor profile fetched successfully', doctor });
+    }
+    
+    // If doctorId is provided, fetch by _id
+    if (doctorId) {
+      const doctor = await Doctor.findById(doctorId).lean();
+      
+      if (!doctor) {
+        return NextResponse.json({ error: 'Doctor profile not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ message: 'Doctor profile fetched successfully', doctor });
+    }
+
+    // If neither is provided, try to get from Authorization header (for future JWT support)
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      // For now, we can't verify random UUID tokens, so we'll just return an error
+      // In the future, this can be enhanced with JWT support
+      return NextResponse.json({ error: 'Please provide userId or doctorId as query parameters' }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: 'User ID or Doctor ID is required' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Doctor profile fetch error:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}
+
 // PUT /api/doctor/profile
 // Body: { email, name, phone, department, specialization, experience, qualification, bio, consultationFee, avatar, isAvailable }
 export async function PUT(request: NextRequest) {
