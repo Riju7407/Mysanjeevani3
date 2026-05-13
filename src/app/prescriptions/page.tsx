@@ -128,7 +128,7 @@ export default function MyPrescriptionsPage() {
       doc.text('Patient Details:', margin, yPosition);
       yPosition += 5;
 
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.text(`Name: ${prescription.consultationId.patientName}`, margin, yPosition);
       yPosition += 5;
 
@@ -148,7 +148,7 @@ export default function MyPrescriptionsPage() {
         doc.text('Diagnosis:', margin, yPosition);
         yPosition += 5;
 
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         const diagnosisLines = doc.splitTextToSize(
           prescription.diagnosis,
           contentWidth
@@ -163,7 +163,7 @@ export default function MyPrescriptionsPage() {
         doc.text('Medicines:', margin, yPosition);
         yPosition += 5;
 
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         prescription.medicines.forEach((medicine, idx) => {
           const medicineText = `${idx + 1}. ${medicine.name}`;
           const dosageText = `Dosage: ${medicine.dosage} | Frequency: ${medicine.frequency} | Duration: ${medicine.duration}`;
@@ -185,7 +185,7 @@ export default function MyPrescriptionsPage() {
         doc.text('Additional Notes:', margin, yPosition);
         yPosition += 5;
 
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         const notesLines = doc.splitTextToSize(prescription.notes, contentWidth);
         doc.text(notesLines, margin, yPosition);
         yPosition += notesLines.length * 5 + 5;
