@@ -194,7 +194,7 @@ export default function MyPrescriptionsPage() {
       // Validity
       if (prescription.expiryDate) {
         const expiryDate = new Date(prescription.expiryDate).toLocaleDateString();
-        doc.setFont(undefined, 'italic');
+        doc.setFont('helvetica', 'italic');
         doc.setFontSize(9);
         doc.text(
           `Valid until: ${expiryDate}`,
