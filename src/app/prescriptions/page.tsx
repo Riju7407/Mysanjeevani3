@@ -95,12 +95,12 @@ export default function MyPrescriptionsPage() {
 
       // Header - Doctor Details
       doc.setFontSize(16);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('PRESCRIPTION', margin, yPosition);
       yPosition += 10;
 
       doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.text(`Dr. ${prescription.doctorName}`, margin, yPosition);
       yPosition += 5;
 
@@ -124,7 +124,7 @@ export default function MyPrescriptionsPage() {
       yPosition += 8;
 
       // Patient Details
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('Patient Details:', margin, yPosition);
       yPosition += 5;
 
@@ -144,7 +144,7 @@ export default function MyPrescriptionsPage() {
 
       // Diagnosis
       if (prescription.diagnosis) {
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Diagnosis:', margin, yPosition);
         yPosition += 5;
 
@@ -159,7 +159,7 @@ export default function MyPrescriptionsPage() {
 
       // Medicines
       if (prescription.medicines && prescription.medicines.length > 0) {
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Medicines:', margin, yPosition);
         yPosition += 5;
 
@@ -181,7 +181,7 @@ export default function MyPrescriptionsPage() {
 
       // Notes
       if (prescription.notes) {
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('Additional Notes:', margin, yPosition);
         yPosition += 5;
 
