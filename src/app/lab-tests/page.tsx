@@ -262,7 +262,7 @@ function LabTestsPageContent() {
     }
 
     setBookingForm({
-      testId: test._id,
+      testId: String(test._id),
       testName: test.name,
       testPrice: test.price,
       collectionType: 'home',
@@ -532,7 +532,7 @@ function LabTestsPageContent() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="sticky top-[68px] md:top-0 z-30 bg-white border-b border-emerald-200 shadow-sm -mt-40">
+      <div className="sticky top-17 md:top-0 z-30 bg-white border-b border-emerald-200 shadow-sm -mt-40">
         <div className="max-w-7xl mx-auto px-4 py-1">
           <div className="flex flex-col gap-7 md:gap-4 md:flex-row md:items-center md:justify-between">
             {/* Search Bar */}
