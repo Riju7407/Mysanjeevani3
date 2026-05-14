@@ -848,10 +848,10 @@ export default function AdminMedicines() {
     }
     setLabSaving(false);
   };
-  const deleteLab = async (id: string) => {
+  const deleteLab = async (id: string | number) => {
     if (!confirm('Delete this lab test?')) return;
     await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
-    setLabTests((p) => p.filter((t) => t._id !== id));
+    setLabTests((p) => p.filter((t) => String(t._id) !== String(id)));
   };
   const toggleLabActive = async (t: LabTest) => {
     await fetch(`/api/admin/products/${t._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !t.isActive }) });
