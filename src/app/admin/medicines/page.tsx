@@ -662,10 +662,10 @@ export default function AdminMedicines() {
     } catch {}
     setMedSaving(false);
   };
-  const deleteProd = async (id: string) => {
+  const deleteProd = async (id: string | number) => {
     if (!confirm('Delete this product?')) return;
     await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
-    setMedicines((p) => p.filter((m) => m._id !== id));
+    setMedicines((p) => p.filter((m) => String(m._id) !== String(id)));
   };
   const toggleProdActive = async (m: Medicine) => {
     await fetch(`/api/admin/products/${m._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !m.isActive }) });
