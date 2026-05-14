@@ -15,12 +15,17 @@ export async function GET(
     await connectDB();
 
     const { id } = await params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    const normalizedId = (id || '').trim();
+    const isNumericId = /^\d+$/.test(normalizedId);
+    const numericId = isNumericId ? Number(normalizedId) : NaN;
+    const isObjectId = mongoose.Types.ObjectId.isValid(normalizedId);
+
+    if (!isNumericId && !isObjectId) {
       return NextResponse.json({ error: 'Invalid product id' }, { status: 400 });
     }
 
     const product = await Product.findOne({
-      _id: id,
+      _id: isNumericId ? numericId : normalizedId,
       isActive: true,
       $or: [{ approvalStatus: 'approved' }, { approvalStatus: { $exists: false } }],
     });
