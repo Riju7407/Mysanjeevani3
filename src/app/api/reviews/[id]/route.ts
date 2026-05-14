@@ -4,8 +4,33 @@ import { connectDB } from '@/lib/db';
 import { Review } from '@/lib/models/Review';
 import { Product } from '@/lib/models/Product';
 
+const toReviewProductIdVariants = (value: unknown): Array<string | number | mongoose.Types.ObjectId> => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return [];
+
+  const variants = new Map<string, string | number | mongoose.Types.ObjectId>();
+  variants.set(`str:${raw}`, raw);
+
+  if (/^\d+$/.test(raw)) {
+    variants.set(`num:${raw}`, Number(raw));
+  }
+
+  if (mongoose.Types.ObjectId.isValid(raw)) {
+    variants.set(`oid:${raw}`, new mongoose.Types.ObjectId(raw));
+  }
+
+  return Array.from(variants.values());
+};
+
+const toProductLookupId = (value: unknown): string | number => {
+  const raw = String(value ?? '').trim();
+  if (/^\d+$/.test(raw)) return Number(raw);
+  return raw;
+};
+
 async function recalculateProductRating(productId: string) {
-  const productReviews = await Review.find({ productId }).select('rating').lean();
+  const productIdVariants = toReviewProductIdVariants(productId);
+  const productReviews = await Review.find({ productId: { $in: productIdVariants } }).select('rating').lean();
   const total = productReviews.length;
   const averageRating =
     total > 0
@@ -16,7 +41,7 @@ async function recalculateProductRating(productId: string) {
         )
       : 0;
 
-  await Product.findByIdAndUpdate(productId, {
+  await Product.findOneAndUpdate({ _id: toProductLookupId(productId) }, {
     rating: averageRating,
     reviews: total,
   });

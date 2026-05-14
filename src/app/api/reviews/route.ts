@@ -4,6 +4,30 @@ import { connectDB } from '@/lib/db';
 import { Review } from '@/lib/models/Review';
 import { Product } from '@/lib/models/Product';
 
+const toReviewProductIdVariants = (value: unknown): Array<string | number | mongoose.Types.ObjectId> => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return [];
+
+  const variants = new Map<string, string | number | mongoose.Types.ObjectId>();
+  variants.set(`str:${raw}`, raw);
+
+  if (/^\d+$/.test(raw)) {
+    variants.set(`num:${raw}`, Number(raw));
+  }
+
+  if (mongoose.Types.ObjectId.isValid(raw)) {
+    variants.set(`oid:${raw}`, new mongoose.Types.ObjectId(raw));
+  }
+
+  return Array.from(variants.values());
+};
+
+const toProductLookupId = (value: unknown): string | number => {
+  const raw = String(value ?? '').trim();
+  if (/^\d+$/.test(raw)) return Number(raw);
+  return raw;
+};
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -17,13 +41,15 @@ export async function GET(request: NextRequest) {
       const ids = productIds
         .split(',')
         .map((id) => id.trim())
-        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+        .filter(Boolean);
 
       if (!ids.length) {
         return NextResponse.json({ summaries: {} }, { status: 200 });
       }
 
-      const reviews = await Review.find({ productId: { $in: ids } })
+      const reviewIdVariants = ids.flatMap((id) => toReviewProductIdVariants(id));
+
+      const reviews = await Review.find({ productId: { $in: reviewIdVariants } })
         .sort({ createdAt: -1 })
         .lean();
 
@@ -37,8 +63,9 @@ export async function GET(request: NextRequest) {
       }
 
       for (const review of reviews) {
-        const key = String(review.productId);
-        if (!grouped[key]) continue;
+        const reviewProductId = String(review.productId);
+        const key = ids.find((candidate) => toReviewProductIdVariants(candidate).some((variant) => String(variant) === reviewProductId));
+        if (!key || !grouped[key]) continue;
 
         grouped[key].total += 1;
         grouped[key].ratingSum += Number(review.rating || 0);
@@ -73,7 +100,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
+    const productIdVariants = toReviewProductIdVariants(productId);
+    if (!productIdVariants.length) {
       return NextResponse.json(
         {
           message: 'No reviews available for this product',
@@ -88,13 +116,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const total = await Review.countDocuments({ productId });
-    const reviews = await Review.find({ productId })
+    const total = await Review.countDocuments({ productId: { $in: productIdVariants } });
+    const reviews = await Review.find({ productId: { $in: productIdVariants } })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const allRatings = await Review.find({ productId }).select('rating').lean();
+    const allRatings = await Review.find({ productId: { $in: productIdVariants } }).select('rating').lean();
     const averageRating =
       allRatings.length > 0
         ? Number(
@@ -140,12 +168,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return NextResponse.json(
-        { error: 'Reviews are not supported for this product type yet' },
-        { status: 400 }
-      );
+    const productIdVariants = toReviewProductIdVariants(productId);
+    if (!productIdVariants.length) {
+      return NextResponse.json({ error: 'Invalid product id' }, { status: 400 });
     }
+
+    const normalizedProductId = String(productId).trim();
 
     const parsedRating = Number(rating);
     if (!Number.isFinite(parsedRating) || parsedRating < 1 || parsedRating > 5) {
@@ -157,7 +185,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const existing = await Review.findOne({ userId, productId });
+    const existing = await Review.findOne({ userId, productId: { $in: productIdVariants } });
 
     let review;
     if (existing) {
@@ -169,7 +197,7 @@ export async function POST(request: NextRequest) {
     } else {
       review = await Review.create({
         userId,
-        productId,
+        productId: normalizedProductId,
         rating: parsedRating,
         title,
         comment,
@@ -177,7 +205,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const productReviews = await Review.find({ productId }).select('rating').lean();
+    const productReviews = await Review.find({ productId: { $in: productIdVariants } }).select('rating').lean();
     const total = productReviews.length;
     const averageRating =
       total > 0
@@ -188,7 +216,7 @@ export async function POST(request: NextRequest) {
           )
         : 0;
 
-    await Product.findByIdAndUpdate(productId, {
+    await Product.findOneAndUpdate({ _id: toProductLookupId(normalizedProductId) }, {
       rating: averageRating,
       reviews: total,
     });
