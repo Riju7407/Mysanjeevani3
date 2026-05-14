@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
+import { generateProductId } from '@/lib/utils/productIdGenerator';
 import { fetchPartnerCatalog } from '@/lib/labPartners';
 
 export async function GET(request: NextRequest) {
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     const test = await Product.create({
+      _id: await generateProductId(),
       name,
       description,
       price,

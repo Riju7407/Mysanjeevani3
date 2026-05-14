@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
+import { generateProductId } from '@/lib/utils/productIdGenerator';
 import { Vendor } from '@/lib/models/Vendor';
 
 const VENDOR_CATEGORY_MAP = {
@@ -286,6 +287,7 @@ export async function POST(request: NextRequest) {
 
     // Create product with properly typed numeric fields
     const newProduct = await Product.create({
+      _id: await generateProductId(),
       ...otherFields,
       potency: parsedPotency,
       name,

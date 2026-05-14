@@ -7,7 +7,7 @@ import MultiCategorySelect from '@/components/MultiCategorySelect';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Medicine {
-  _id: string;
+  _id: number;
   vendorId?: string | null;
   name: string;
   brand: string;
@@ -45,7 +45,7 @@ interface Medicine {
 }
 
 interface LabTest {
-  _id: string;
+  _id: number;
   name: string;
   category: string;
   price: number;
@@ -971,8 +971,10 @@ export default function AdminMedicines() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {pendingMedicineApprovals.map((m) => (
-                        <tr key={m._id} className="hover:bg-slate-50">
+                      {pendingMedicineApprovals.map((m, index) => {
+                        const rowKey = m._id !== undefined && m._id !== null ? String(m._id) : `pending-medicine-${index}`;
+                        return (
+                          <tr key={rowKey} className="hover:bg-slate-50">
                           <td className="px-4 py-3 text-sm font-medium text-slate-900">{m.name}</td>
                           <td className="px-4 py-3 text-sm text-slate-600">{m.vendorName || 'MySanjeevni'}</td>
                           <td className="px-4 py-3 text-sm text-slate-600">{m.category}</td>
@@ -983,8 +985,9 @@ export default function AdminMedicines() {
                               <button onClick={() => rejectProd(m)} className="text-amber-600 hover:text-amber-800 text-sm font-medium hover:underline">Reject</button>
                             </div>
                           </td>
-                        </tr>
-                      ))}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1343,8 +1346,10 @@ export default function AdminMedicines() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredMeds.length === 0 ? (
                       <tr><td colSpan={10} className="px-6 py-12 text-center text-slate-400">No products found. Add your first product or seed sample data.</td></tr>
-                    ) : filteredMeds.map((m) => (
-                      <tr key={m._id} className={`hover:bg-slate-50 transition-colors ${!m.isActive ? 'opacity-60' : ''}`}>
+                    ) : filteredMeds.map((m, index) => {
+                      const rowKey = m._id !== undefined && m._id !== null ? String(m._id) : `medicine-${index}`;
+                      return (
+                      <tr key={rowKey} className={`hover:bg-slate-50 transition-colors ${!m.isActive ? 'opacity-60' : ''}`}>
                         <td className="px-6 py-4 text-2xl">{m.icon || '💊'}</td>
                         <td className="px-6 py-4"><div className="font-medium text-slate-900 text-sm">{m.name}</div><div className="text-xs text-slate-500">{m.brand || '—'}</div></td>
                         <td className="px-6 py-4 text-sm text-slate-600">{m.category}</td>
@@ -1360,7 +1365,8 @@ export default function AdminMedicines() {
                         <td className="px-6 py-4"><button onClick={() => toggleProdActive(m)} className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${m.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{m.isActive ? 'Active' : 'Inactive'}</button></td>
                         <td className="px-6 py-4"><div className="flex gap-3 flex-wrap">{(m.approvalStatus || 'approved') === 'pending' && <><button onClick={() => approveProd(m)} className="text-emerald-600 hover:text-emerald-800 text-sm font-medium hover:underline">Approve</button><button onClick={() => rejectProd(m)} className="text-amber-600 hover:text-amber-800 text-sm font-medium hover:underline">Reject</button></>}<button onClick={() => addToFeaturedProducts(m)} disabled={featureSubmittingId === m._id || (m.approvalStatus || 'approved') !== 'approved'} className={`text-sm font-medium ${(featureSubmittingId === m._id || (m.approvalStatus || 'approved') !== 'approved') ? 'text-slate-400 cursor-not-allowed' : 'text-violet-600 hover:text-violet-800 hover:underline'}`}>{featureSubmittingId === m._id ? 'Adding...' : 'Add to Featured'}</button><button onClick={() => openEditProd(m)} className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline">Edit</button><button onClick={() => deleteProd(m._id)} className="text-red-600 hover:text-red-800 text-sm font-medium hover:underline">Delete</button></div></td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1578,8 +1584,10 @@ export default function AdminMedicines() {
                 <tbody className="divide-y divide-slate-100">
                   {labSubmissions.length === 0 ? (
                     <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">No vendor lab-test submissions found.</td></tr>
-                  ) : labSubmissions.map((m) => (
-                    <tr key={m._id} className="hover:bg-slate-50 transition-colors">
+                  ) : labSubmissions.map((m, index) => {
+                    const rowKey = m._id !== undefined && m._id !== null ? String(m._id) : `lab-submission-${index}`;
+                    return (
+                    <tr key={rowKey} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
                         {(m as any).image ? (
                           <img src={(m as any).image} alt={m.name} className="h-12 w-12 object-cover rounded-lg border border-slate-200" />
@@ -1611,7 +1619,8 @@ export default function AdminMedicines() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

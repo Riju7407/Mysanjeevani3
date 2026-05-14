@@ -14,7 +14,7 @@ import FeaturedProductsSection from '@/components/FeaturedProductsSection';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface Product {
-  _id: string;
+  _id: number;
   name: string;
   brand?: string;
   category: string;
@@ -169,19 +169,28 @@ function PopularProductsDisplay({
         </div>
 
         <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative z-10 ${isCompactPopularCard ? 'gap-4' : 'gap-5'}`}>
-          {products.slice(0, 8).map((product) => {
-            const summary = reviewSummaries[product._id] || {
+          {products.slice(0, 8).map((product, index) => {
+            const productId = product._id !== undefined && product._id !== null ? String(product._id) : null;
+            const cardKey = productId || `${product.name || 'product'}-${index}`;
+            const summary = productId ? (reviewSummaries[productId] || {
+              averageRating: product.rating || 0,
+              total: product.reviews || 0,
+            }) : {
               averageRating: product.rating || 0,
               total: product.reviews || 0,
             };
 
             return (
               <article
-                key={product._id}
+                key={cardKey}
                 className={`group bg-white/95 border border-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 cursor-pointer ${
                   isCompactPopularCard ? 'w-full max-w-56 mx-auto' : ''
                 }`}
-                onClick={() => onProductClick(product._id)}
+                onClick={() => {
+                  if (productId) {
+                    onProductClick(productId);
+                  }
+                }}
               >
                 <div className={`relative bg-linear-to-br from-white to-slate-50 flex items-center justify-center overflow-hidden ${isCompactPopularCard ? 'h-40' : 'h-48'}`}>
                   <span className={`absolute top-3 left-3 rounded-full px-2.5 py-1 text-[10px] font-bold ${theme.chip}`}>
@@ -332,13 +341,14 @@ export default function HomePage() {
     try {
       const raw = localStorage.getItem('cart') || '[]';
       const cart = JSON.parse(raw);
-      const existing = cart.find((item: any) => item.id === product._id);
+      const productId = product._id !== undefined && product._id !== null ? String(product._id) : `${product.name || 'product'}`;
+      const existing = cart.find((item: any) => item.id === productId);
 
       if (existing) {
         existing.quantity += 1;
       } else {
         cart.push({
-          id: product._id,
+          id: productId,
           name: product.name,
           price: product.displayPrice ?? product.price,
           displayPrice: product.displayPrice ?? product.price,

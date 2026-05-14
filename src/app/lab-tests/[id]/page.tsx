@@ -9,7 +9,7 @@ import { OTPVerificationModal } from '@/components/OTPVerificationModal';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface LabTest {
-  _id: string;
+  _id: number;
   name: string;
   description?: string;
   price: number;

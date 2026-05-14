@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
+import { generateProductId } from '@/lib/utils/productIdGenerator';
 
 // ─── EXACT products from homepage screenshots ───────────────────────────────
 
@@ -73,8 +74,15 @@ export async function POST(req: Request) {
     if (prodCount === 0 || force) {
       if (force) await Product.deleteMany({});
       const allProducts = [...MEDICINES, ...AYURVEDA_PRODUCTS, ...HOMEOPATHY_PRODUCTS];
-      await Product.insertMany(allProducts);
-      results.products = allProducts.length;
+      // Add numeric IDs to each product
+      const productsWithIds = await Promise.all(
+        allProducts.map(async (product) => ({
+          _id: await generateProductId(),
+          ...product,
+        }))
+      );
+      await Product.insertMany(productsWithIds);
+      results.products = productsWithIds.length;
     } else {
       results.products = 0; // already seeded
     }
@@ -83,8 +91,15 @@ export async function POST(req: Request) {
     const labTestCount = await Product.countDocuments({ productType: 'Lab Tests' });
     if (labTestCount === 0 || force) {
       if (force) await Product.deleteMany({ productType: 'Lab Tests' });
-      await Product.insertMany(LAB_TESTS);
-      results.labTests = LAB_TESTS.length;
+      // Add numeric IDs to each lab test
+      const labTestsWithIds = await Promise.all(
+        LAB_TESTS.map(async (test) => ({
+          _id: await generateProductId(),
+          ...test,
+        }))
+      );
+      await Product.insertMany(labTestsWithIds);
+      results.labTests = labTestsWithIds.length;
     } else {
       results.labTests = 0; // already seeded
     }

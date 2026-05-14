@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
+import { generateProductId } from '@/lib/utils/productIdGenerator';
 import { detectUserCountry, convertPrice } from '@/lib/currencyUtils';
 import { getCountryFromCookieHeader, isIndiaCountry } from '@/lib/countryPreference';
 
@@ -210,6 +211,7 @@ export async function POST(request: NextRequest) {
     }
 
     const product = await Product.create({
+      _id: await generateProductId(),
       name,
       description,
       price,

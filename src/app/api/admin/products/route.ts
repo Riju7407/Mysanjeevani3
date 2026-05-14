@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
+import { generateProductId } from '@/lib/utils/productIdGenerator';
 
 export async function GET(request: NextRequest) {
   try {
@@ -81,7 +82,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate a numeric product ID
+    const productId = await generateProductId();
+
     const newProduct = await Product.create({
+      _id: productId,
       ...body,
       usdPrice: Number(body.usdPrice),
       potency: normalizedPotency,

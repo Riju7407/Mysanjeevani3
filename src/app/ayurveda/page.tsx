@@ -20,7 +20,7 @@ const AYURVEDA_CATEGORY_ALIASES: Record<string, string> = {
 };
 
 interface Product {
-  _id: string;
+  _id: number;
   name: string;
   brand?: string;
   category: string;
@@ -318,8 +318,8 @@ function AyurvedaContent() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filtered.map((p) => (
                 <article
-                  key={p._id}
-                  onClick={() => router.push(`/medicines/${p._id}`)}
+                  key={String(p._id)}
+                  onClick={() => router.push(`/medicines/${String(p._id)}`)}
                   className="group w-full max-w-56 mx-auto bg-white/95 border border-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 flex flex-col cursor-pointer"
                 >
                   {/* Image Container */}

@@ -27,7 +27,7 @@ interface VendorInfo {
 }
 
 interface Product {
-  _id: string;
+  _id: number;
   name: string;
   brand?: string;
   price: number;
@@ -2260,7 +2260,7 @@ export default function VendorDashboard() {
                   </thead>
                   <tbody>
                     {products.map((product) => (
-                      <tr key={product._id} className="border-b hover:bg-gray-50">
+                      <tr key={String(product._id)} className="border-b hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             {product.image ? (

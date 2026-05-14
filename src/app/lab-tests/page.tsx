@@ -16,7 +16,7 @@ declare global {
 }
 
 interface LabTest {
-  _id: string;
+  _id: number;
   name: string;
   description?: string;
   price: number;
@@ -684,9 +684,9 @@ function LabTestsPageContent() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {filteredAndSortedTests.map((test) => (
                     <article
-                      key={test._id}
+                      key={String(test._id)}
                       className="group w-full max-w-56 mx-auto bg-white/95 border border-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 cursor-pointer flex flex-col"
-                      onClick={() => router.push(`/lab-tests/${test._id}`)}
+                      onClick={() => router.push(`/lab-tests/${String(test._id)}`)}
                     >
                       {/* Image Container */}
                       <div className="relative h-40 bg-linear-to-br from-white to-slate-50 flex items-center justify-center overflow-hidden">

@@ -5,6 +5,10 @@ const QUANTITY_UNIT_OPTIONS = ['None', 'BAGS (Bag)', 'BOTTLES (Btl)', 'BOX (Box)
 
 const productSchema = new mongoose.Schema(
   {
+    _id: {
+      type: Number,
+      required: true,
+    },
     // Product Info
     name: {
       type: String,

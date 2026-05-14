@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface HomeopathyProduct {
-  _id: string;
+  _id: number;
   name: string;
   brand?: string;
   category: string;
@@ -233,7 +233,7 @@ function HomeopathyContent() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="sticky top-[68px] md:top-0 z-30 bg-white border-b border-pink-200 shadow-sm -mt-40">
+      <div className="sticky top-17 md:top-0 z-30 bg-white border-b border-pink-200 shadow-sm -mt-40">
         <div className="max-w-7xl mx-auto px-4 py-1">
           <div className="flex flex-col gap-7 md:gap-4 md:flex-row md:items-center md:justify-between">
             {/* Search Bar */}
@@ -342,16 +342,22 @@ function HomeopathyContent() {
           <>
             {/* Products Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => {
+              {filteredProducts.map((product, index) => {
                 const productDiscount = isIndia && product.mrp && product.mrp > product.price
                   ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
                   : product.discount || 0;
+                const productId = product._id !== undefined && product._id !== null ? String(product._id) : null;
+                const cardKey = productId || `${product.name || 'homeopathy-product'}-${index}`;
 
                 return (
                   <article
-                    key={product._id}
+                    key={cardKey}
                     className="group w-full max-w-56 mx-auto bg-white/95 border border-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 cursor-pointer"
-                    onClick={() => router.push(`/medicines/${product._id}`)}
+                    onClick={() => {
+                      if (productId) {
+                        router.push(`/medicines/${productId}`);
+                      }
+                    }}
                   >
                     {/* Image Container */}
                     <div className="relative h-40 bg-linear-to-br from-white to-slate-50 flex items-center justify-center overflow-hidden">

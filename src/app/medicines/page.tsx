@@ -9,7 +9,7 @@ import { Suspense } from 'react';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface Product {
-  _id: string;
+  _id: number;
   name: string;
   brand: string;
   potency?: string;
@@ -768,7 +768,7 @@ function MedicinesContent() {
 
                 return (
                   <article
-                    key={product._id}
+                    key={String(product._id)}
                     className="group w-full max-w-56 mx-auto bg-white/95 border border-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300 cursor-pointer"
                     onClick={() => router.push(getProductPageHref(product))}
                   >

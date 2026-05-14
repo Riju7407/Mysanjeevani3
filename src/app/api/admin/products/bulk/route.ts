@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Product } from '@/lib/models/Product';
+import { generateProductId } from '@/lib/utils/productIdGenerator';
 import * as XLSX from 'xlsx';
 
 function normalizeHeaderKey(key: string) {
@@ -69,7 +70,12 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        const createdProduct = await Product.create(product);
+        // Generate a numeric product ID
+        const productId = await generateProductId();
+        const createdProduct = await Product.create({
+          _id: productId,
+          ...product,
+        });
         created.push(createdProduct);
       } catch (err: any) {
         errors.push({ row: i + 2, error: err.message || 'DB error' });

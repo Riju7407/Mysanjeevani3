@@ -732,7 +732,7 @@ export default function FeaturedProductsAdmin() {
                 .filter(p => `${p.brandName} ${p.category || ''} ${p.subcategory || ''}`.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((product) => (
                   <div
-                    key={product._id}
+                    key={String(product._id)}
                     className="bg-white rounded-lg shadow hover:shadow-xl transition-all duration-300 overflow-hidden group border border-slate-200"
                     style={{ backgroundColor: product.cardBgColor || '#ffffff' }}
                   >
@@ -820,7 +820,7 @@ export default function FeaturedProductsAdmin() {
                   {products
                     .filter(p => `${p.brandName} ${p.category || ''} ${p.subcategory || ''}`.toLowerCase().includes(searchTerm.toLowerCase()))
                     .map((product, idx) => (
-                      <tr key={product._id} className="hover:bg-slate-50 transition-colors">
+                      <tr key={String(product._id)} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 font-semibold text-slate-900">{product.brandName}</td>
                         <td className="px-6 py-4 text-sm text-slate-700">{product.category || '—'}</td>
                         <td className="px-6 py-4 text-sm text-slate-700">{product.subcategory || '—'}</td>

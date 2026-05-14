@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 
 interface Product {
-  _id: string;
+  _id: number;
   name: string;
   brand?: string;
   category: string;
@@ -838,11 +838,11 @@ export default function MedicineDetailsPage() {
                           const isActive = quantityProduct._id === product._id;
                           return (
                             <button
-                              key={`quantity-${quantityProduct._id}`}
+                              key={`quantity-${String(quantityProduct._id)}`}
                               type="button"
                               onClick={() => {
                                 if (!isActive) {
-                                  router.push(`/medicines/${quantityProduct._id}`);
+                                  router.push(`/medicines/${String(quantityProduct._id)}`);
                                 }
                               }}
                               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
@@ -1415,8 +1415,8 @@ export default function MedicineDetailsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {relatedProducts.map((relProduct) => (
                       <div
-                        key={relProduct._id}
-                        onClick={() => router.push(`/medicines/${relProduct._id}`)}
+                        key={String(relProduct._id)}
+                        onClick={() => router.push(`/medicines/${String(relProduct._id)}`)}
                         className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition cursor-pointer"
                       >
                         {/* Product Image */}
