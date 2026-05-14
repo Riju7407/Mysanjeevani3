@@ -2300,7 +2300,7 @@ export default function VendorDashboard() {
                               Edit
                             </button>
                             <button
-                              onClick={() => handleDeleteProduct(product._id)}
+                              onClick={() => handleDeleteProduct(String(product._id))}
                               className="text-red-600 hover:text-red-800 font-semibold"
                             >
                               Delete
