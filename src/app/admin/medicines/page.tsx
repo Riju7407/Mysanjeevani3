@@ -762,7 +762,7 @@ export default function AdminMedicines() {
       return;
     }
 
-    setFeatureSubmittingId(m._id);
+    setFeatureSubmittingId(String(m._id));
     try {
       const response = await fetch('/api/featured-products', {
         method: 'POST',
@@ -1363,7 +1363,7 @@ export default function AdminMedicines() {
                         </td>
                         <td className="px-6 py-4"><button onClick={() => toggleProdPopular(m)} disabled={(m.approvalStatus || 'approved') !== 'approved'} className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${m.isPopular ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} ${(m.approvalStatus || 'approved') !== 'approved' ? 'opacity-50 cursor-not-allowed' : ''}`}>{m.isPopular ? '⭐ Popular' : 'Not Popular'}</button></td>
                         <td className="px-6 py-4"><button onClick={() => toggleProdActive(m)} className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${m.isActive ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{m.isActive ? 'Active' : 'Inactive'}</button></td>
-                        <td className="px-6 py-4"><div className="flex gap-3 flex-wrap">{(m.approvalStatus || 'approved') === 'pending' && <><button onClick={() => approveProd(m)} className="text-emerald-600 hover:text-emerald-800 text-sm font-medium hover:underline">Approve</button><button onClick={() => rejectProd(m)} className="text-amber-600 hover:text-amber-800 text-sm font-medium hover:underline">Reject</button></>}<button onClick={() => addToFeaturedProducts(m)} disabled={featureSubmittingId === m._id || (m.approvalStatus || 'approved') !== 'approved'} className={`text-sm font-medium ${(featureSubmittingId === m._id || (m.approvalStatus || 'approved') !== 'approved') ? 'text-slate-400 cursor-not-allowed' : 'text-violet-600 hover:text-violet-800 hover:underline'}`}>{featureSubmittingId === m._id ? 'Adding...' : 'Add to Featured'}</button><button onClick={() => openEditProd(m)} className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline">Edit</button><button onClick={() => deleteProd(m._id)} className="text-red-600 hover:text-red-800 text-sm font-medium hover:underline">Delete</button></div></td>
+                        <td className="px-6 py-4"><div className="flex gap-3 flex-wrap">{(m.approvalStatus || 'approved') === 'pending' && <><button onClick={() => approveProd(m)} className="text-emerald-600 hover:text-emerald-800 text-sm font-medium hover:underline">Approve</button><button onClick={() => rejectProd(m)} className="text-amber-600 hover:text-amber-800 text-sm font-medium hover:underline">Reject</button></>}<button onClick={() => addToFeaturedProducts(m)} disabled={featureSubmittingId === String(m._id) || (m.approvalStatus || 'approved') !== 'approved'} className={`text-sm font-medium ${(featureSubmittingId === String(m._id) || (m.approvalStatus || 'approved') !== 'approved') ? 'text-slate-400 cursor-not-allowed' : 'text-violet-600 hover:text-violet-800 hover:underline'}`}>{featureSubmittingId === String(m._id) ? 'Adding...' : 'Add to Featured'}</button><button onClick={() => openEditProd(m)} className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline">Edit</button><button onClick={() => deleteProd(m._id)} className="text-red-600 hover:text-red-800 text-sm font-medium hover:underline">Delete</button></div></td>
                       </tr>
                       );
                     })}
