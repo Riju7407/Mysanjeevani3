@@ -121,7 +121,7 @@ const getVariantCandidates = async (currentProduct: Product): Promise<Product[]>
 
   const byId = new Map<string, Product>();
   [...categoryProducts, ...globalProducts].forEach((item) => {
-    if (item?._id) byId.set(item._id, item);
+    if (item?._id !== undefined && item?._id !== null) byId.set(String(item._id), item);
   });
   return Array.from(byId.values());
 };
