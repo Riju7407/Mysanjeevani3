@@ -880,7 +880,7 @@ export default function VendorDashboard() {
     const isBabyCare = inferredProductType === 'Baby Care';
     const isFitness = inferredProductType === 'Fitness';
     const isUnani = inferredProductType === 'Unani';
-    setEditingProductId(product._id);
+    setEditingProductId(String(product._id));
     setEditProduct({
       name: product.name || '',
       brand: product.brand || '',
