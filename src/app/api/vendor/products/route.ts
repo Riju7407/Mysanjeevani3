@@ -284,11 +284,15 @@ export async function POST(request: NextRequest) {
                 : body.isPopular
                   ? 'Generic'
                   : 'None';
+    const validPopularSections = ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'] as const;
 
     // Handle new popularSections array (or fallback to legacy popularSection)
     const normalizedPopularSections =
       Array.isArray(body.popularSections) && body.popularSections.length > 0
-        ? body.popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s))
+        ? body.popularSections.filter(
+            (s: unknown): s is string =>
+              typeof s === 'string' && validPopularSections.includes(s as any)
+          )
         : (normalizedPopularSection !== 'None' ? [normalizedPopularSection] : []);
 
     // Create product with properly typed numeric fields
