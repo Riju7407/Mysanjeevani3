@@ -151,10 +151,14 @@ export async function PUT(request: NextRequest) {
       typeof update.popularSection === 'string' && ['None', 'Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(update.popularSection)
         ? update.popularSection
         : undefined;
+    const validPopularSections = ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'] as const;
     
     // Handle new popularSections array (or fallback to legacy popularSection)
     if (Array.isArray(update.popularSections) && update.popularSections.length > 0) {
-      const filtered = update.popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s));
+      const filtered = update.popularSections.filter(
+        (s: unknown): s is string =>
+          typeof s === 'string' && validPopularSections.includes(s as any)
+      );
       if (filtered.length > 0) {
         update.popularSections = filtered;
         update.popularSection = filtered[0];
