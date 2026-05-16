@@ -60,10 +60,14 @@ export async function POST(request: NextRequest) {
       typeof body.approvalStatus === 'string'
         ? (body.approvalStatus.trim().toLowerCase() || undefined)
         : body.approvalStatus;
+    const validPopularSections = ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'] as const;
     const normalizedPopularSections =
       Array.isArray(body.popularSections) && body.popularSections.length > 0
-        ? body.popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s))
-        : (typeof body.popularSection === 'string' && ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(body.popularSection)
+        ? body.popularSections.filter(
+            (s: unknown): s is string =>
+              typeof s === 'string' && validPopularSections.includes(s as any)
+          )
+        : (typeof body.popularSection === 'string' && validPopularSections.includes(body.popularSection as any)
           ? [body.popularSection]
           : body.isPopularGeneric
             ? ['Generic']
