@@ -347,6 +347,7 @@ export default function VendorDashboard() {
     isPopularAyurveda: false,
     isPopularHomeopathy: false,
     isPopularLabTests: false,
+    popularSection: 'None',
     popularSections: [] as string[],
     stock: '',
     image: '',
@@ -376,6 +377,7 @@ export default function VendorDashboard() {
     diseaseSubcategory: '',
     benefit: '',
     requiresPrescription: false,
+    popularSection: 'None',
     popularSections: [] as string[],
     stock: '',
     image: '',
@@ -981,6 +983,7 @@ export default function VendorDashboard() {
          (product as any).isPopularLabTests ? 'LabTests' :
          (product as any).isPopular ? 'Generic' :
          'None'),
+      popularSections: (product as any).popularSections || [],
       stock: String(product.stock ?? ''),
       image: product.image || '',
     });
