@@ -188,7 +188,8 @@ export default function DoctorPanelPage() {
     router.push('/');
   };
 
-  const isImageUrl = (value?: string) => !!value && /^(https?:\/\/|\/)/i.test(value);
+  const isImageUrl = (value?: string) =>
+    !!value && /^(https?:\/\/|\/|data:image\/|blob:)/i.test(value);
   const dashboardAvatar = profileImagePreview || profileForm.avatar || doctorProfile?.avatar || '';
 
   const uploadDoctorProfileImage = async (file?: File) => {
@@ -566,7 +567,8 @@ export default function DoctorPanelPage() {
                   min={new Date().toISOString().split('T')[0]}
                   value={newAvailableDate}
                   onChange={(e) => setNewAvailableDate(e.target.value)}
-                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  placeholder="Select appointment date"
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 />
                 <button
                   type="button"
@@ -678,12 +680,12 @@ export default function DoctorPanelPage() {
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                     placeholder="Search patient or phone"
-                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                   />
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
                   >
                     <option value="all">All Status</option>
                     <option value="pending">Pending</option>

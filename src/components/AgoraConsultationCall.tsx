@@ -154,11 +154,6 @@ export default function AgoraConsultationCall({
   }, []);
 
   useEffect(() => {
-    if (!isOpen || !isMinimized || miniPosition) return;
-    setMiniPosition(getDefaultMiniPosition());
-  }, [getDefaultMiniPosition, isMinimized, isOpen, miniPosition]);
-
-  useEffect(() => {
     if (!isOpen || !isMinimized) return;
 
     const onResize = () => {
@@ -229,10 +224,10 @@ export default function AgoraConsultationCall({
               if (mounted) {
                 setHasRemoteParticipant(true);
               }
-            } catch (error: any) {
+            } catch (error: unknown) {
               if (mounted) {
                 setStatus('error');
-                setErrorMessage(error?.message || 'Unable to subscribe to remote participant.');
+                setErrorMessage(error instanceof Error ? error.message : 'Unable to subscribe to remote participant.');
               }
             }
           })();
@@ -280,10 +275,10 @@ export default function AgoraConsultationCall({
 
         if (!mounted) return;
         setStatus('connected');
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!mounted) return;
         setStatus('error');
-        setErrorMessage(error?.message || 'Unable to start Agora consultation call.');
+        setErrorMessage(error instanceof Error ? error.message : 'Unable to start Agora consultation call.');
       }
     };
 
@@ -378,9 +373,9 @@ export default function AgoraConsultationCall({
 
             <button
               onClick={leaveCall}
-              className="rounded-md bg-red-600 hover:bg-red-700 px-2.5 py-1.5 text-[11px] font-semibold"
+              className="rounded-md bg-red-600 hover:bg-red-700 px-3 py-1.5 text-[11px] font-semibold"
             >
-              End
+              End Call
             </button>
           </div>
         </div>
@@ -408,16 +403,16 @@ export default function AgoraConsultationCall({
               </span>
             </div>
           </div>
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="shrink-0 flex flex-wrap items-center gap-2">
             <button
               onClick={handleMinimize}
-              className="rounded-lg border border-slate-600 hover:bg-slate-800 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold"
+              className="rounded-full border border-slate-600 bg-slate-900/80 px-4 py-2 text-xs sm:text-sm font-semibold transition hover:bg-slate-800"
             >
               Minimize
             </button>
             <button
               onClick={leaveCall}
-              className="rounded-lg bg-red-600 hover:bg-red-700 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold"
+              className="rounded-full bg-red-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-red-500/20 transition hover:bg-red-700"
             >
               End Call
             </button>
@@ -438,51 +433,70 @@ export default function AgoraConsultationCall({
           )}
 
           {consultationType === 'video' ? (
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 h-full min-h-[420px]">
-              <div className="xl:col-span-3 rounded-2xl border border-slate-700 bg-slate-800 p-3 sm:p-4 relative min-h-[300px]">
-                <p className="text-xs sm:text-sm text-slate-300 mb-2">Other Participant</p>
+            <div className="grid grid-cols-1 xl:grid-cols-[3fr_1fr] gap-4 h-full min-h-[520px]">
+              <div className="relative rounded-[28px] border border-slate-700 bg-slate-950 p-4 overflow-hidden shadow-2xl shadow-slate-950/40 min-h-[420px]">
+                <div className="flex items-center justify-between mb-3 gap-4">
+                  <div>
+                    <p className="text-xs sm:text-sm text-slate-400 uppercase tracking-[0.18em]">Remote Participant</p>
+                    <p className="text-sm font-semibold text-white">Doctor is on the line</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${hasRemoteParticipant ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-200 border border-amber-500/30'}`}>
+                    {hasRemoteParticipant ? 'Connected' : 'Waiting'}
+                  </span>
+                </div>
                 <div
                   ref={remoteVideoRef}
-                  className="h-[52vh] min-h-[260px] sm:min-h-[340px] rounded-xl bg-slate-950 flex items-center justify-center text-slate-400 text-sm text-center px-4"
+                  className="relative h-[calc(100%-76px)] rounded-[24px] border border-slate-800 bg-slate-950 flex items-center justify-center text-slate-400 text-center px-4 overflow-hidden"
                 >
-                  {hasRemoteParticipant ? '' : 'Waiting for other participant to join...'}
+                  {!hasRemoteParticipant && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-slate-100">Waiting for the doctor to join</p>
+                      <p className="text-xs text-slate-400">Your consultation room is ready. Please wait while the doctor connects.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="xl:col-span-1 rounded-2xl border border-slate-700 bg-slate-800 p-3 sm:p-4 min-h-[220px]">
-                <p className="text-xs sm:text-sm text-slate-300 mb-2">You</p>
-                <div ref={localVideoRef} className="h-[26vh] min-h-[180px] rounded-xl bg-slate-950" />
-                <p className="mt-3 text-xs text-slate-400">
-                  {participantType === 'doctor' ? 'Doctor preview' : 'Patient preview'}
-                </p>
+              <div className="rounded-[28px] border border-slate-700 bg-slate-900 p-4 shadow-xl shadow-slate-950/20 min-h-[260px] flex flex-col gap-4">
+                <div>
+                  <p className="text-xs sm:text-sm text-slate-400 uppercase tracking-[0.18em]">Your Camera</p>
+                  <p className="mt-1 text-sm font-semibold text-white">Patient preview</p>
+                </div>
+                <div className="relative flex-1 overflow-hidden rounded-[24px] border border-slate-800 bg-slate-950">
+                  <div ref={localVideoRef} className="h-full w-full" />
+                </div>
+                <div className="space-y-2 text-xs sm:text-sm text-slate-300">
+                  <p className="font-medium text-slate-100">Keep your camera steady and well-lit.</p>
+                  <p>Use a quiet room and stable connection for best consultation quality.</p>
+                </div>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-slate-700 bg-slate-800 p-6 sm:p-8 text-center min-h-[230px] flex flex-col justify-center">
+              <div className="rounded-[28px] border border-slate-700 bg-slate-900 p-8 text-center min-h-[260px] flex flex-col justify-center items-center gap-4 shadow-xl shadow-slate-950/20">
                 <p className="text-5xl">🎧</p>
-                <p className="mt-3 text-sm sm:text-base text-slate-200 font-medium">Audio Channel Active</p>
-                <p className="mt-2 text-xs sm:text-sm text-slate-400">
-                  {hasRemoteParticipant ? 'Both participants are connected on audio call.' : 'Audio room is ready. Waiting for other participant...'}
+                <p className="text-base font-semibold text-white">Audio Consultation Active</p>
+                <p className="text-sm text-slate-400 max-w-sm">
+                  {hasRemoteParticipant ? 'Your doctor is connected and the audio line is live.' : 'Waiting for the doctor to join the audio room.'}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-700 bg-slate-800 p-6 sm:p-8 min-h-[230px]">
-                <h4 className="text-sm sm:text-base font-semibold text-slate-100">Call Tips</h4>
-                <ul className="mt-3 space-y-2 text-xs sm:text-sm text-slate-300">
-                  <li>Use earphones for clearer audio quality.</li>
-                  <li>Keep microphone muted when not speaking.</li>
-                  <li>Use strong network for uninterrupted consultation.</li>
+              <div className="rounded-[28px] border border-slate-700 bg-slate-900 p-8 min-h-[260px] shadow-xl shadow-slate-950/20">
+                <h4 className="text-sm font-semibold text-slate-100">Call Tips</h4>
+                <ul className="mt-4 space-y-3 text-sm text-slate-300">
+                  <li>✔ Use headphones for clear sound and privacy.</li>
+                  <li>✔ Mute your mic when you are not speaking.</li>
+                  <li>✔ Keep a good internet connection for the best consultation.</li>
                 </ul>
               </div>
             </div>
           )}
         </div>
 
-        <div className="border-t border-slate-700/80 bg-slate-900/95 px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="border-t border-slate-700/80 bg-slate-900/95 px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={toggleAudio}
-              className={`rounded-lg border px-4 py-2 text-xs sm:text-sm font-medium transition ${isAudioEnabled ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25' : 'border-amber-500/50 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25'}`}
+              className={`rounded-full border px-5 py-3 text-sm font-semibold transition ${isAudioEnabled ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25' : 'border-amber-500/50 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25'}`}
             >
               {isAudioEnabled ? 'Mute Mic' : 'Unmute Mic'}
             </button>
@@ -490,16 +504,22 @@ export default function AgoraConsultationCall({
             {consultationType === 'video' && (
               <button
                 onClick={toggleVideo}
-                className={`rounded-lg border px-4 py-2 text-xs sm:text-sm font-medium transition ${isVideoEnabled ? 'border-blue-500/50 bg-blue-500/15 text-blue-100 hover:bg-blue-500/25' : 'border-slate-500/50 bg-slate-500/15 text-slate-200 hover:bg-slate-500/25'}`}
+                className={`rounded-full border px-5 py-3 text-sm font-semibold transition ${isVideoEnabled ? 'border-blue-500/50 bg-blue-500/15 text-blue-100 hover:bg-blue-500/25' : 'border-slate-500/50 bg-slate-500/15 text-slate-200 hover:bg-slate-500/25'}`}
               >
                 {isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On'}
               </button>
             )}
 
-            <p className="text-[11px] sm:text-xs text-slate-400 ml-auto">
-              Use HTTPS or localhost for camera and microphone permissions.
-            </p>
+            <button
+              onClick={leaveCall}
+              className="ml-auto rounded-full bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-700"
+            >
+              End Call
+            </button>
           </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Use HTTPS or localhost for camera/mic permissions. Close the call only after your consultation is complete.
+          </p>
         </div>
       </div>
     </div>

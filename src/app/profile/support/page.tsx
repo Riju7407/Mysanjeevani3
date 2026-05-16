@@ -255,7 +255,7 @@ function ProfileSupportContent() {
                 <input
                   value={returnForm.orderId}
                   onChange={(e) => setReturnForm((prev) => ({ ...prev, orderId: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Enter your order ID"
                   required
                 />
@@ -265,7 +265,7 @@ function ProfileSupportContent() {
                 <input
                   value={returnForm.productName}
                   onChange={(e) => setReturnForm((prev) => ({ ...prev, productName: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Product you want to return"
                   required
                 />
@@ -276,7 +276,7 @@ function ProfileSupportContent() {
                   value={returnForm.reason}
                   onChange={(e) => setReturnForm((prev) => ({ ...prev, reason: e.target.value }))}
                   rows={5}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Tell us why you need a return"
                   required
                 />
@@ -286,7 +286,7 @@ function ProfileSupportContent() {
                 <select
                   value={returnForm.preferredResolution}
                   onChange={(e) => setReturnForm((prev) => ({ ...prev, preferredResolution: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="support-review">Support Review</option>
                   <option value="replacement">Replacement</option>
@@ -335,7 +335,7 @@ function ProfileSupportContent() {
                 <select
                   value={ticketForm.category}
                   onChange={(e) => setTicketForm((prev) => ({ ...prev, category: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="general">General</option>
                   <option value="order">Order</option>
@@ -350,7 +350,7 @@ function ProfileSupportContent() {
                 <input
                   value={ticketForm.subject}
                   onChange={(e) => setTicketForm((prev) => ({ ...prev, subject: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Short subject"
                   required
                 />
@@ -361,7 +361,7 @@ function ProfileSupportContent() {
                   value={ticketForm.message}
                   onChange={(e) => setTicketForm((prev) => ({ ...prev, message: e.target.value }))}
                   rows={6}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Describe your issue"
                   required
                 />
@@ -411,7 +411,7 @@ function ProfileSupportContent() {
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
                   rows={6}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Type your message"
                   required
                 />

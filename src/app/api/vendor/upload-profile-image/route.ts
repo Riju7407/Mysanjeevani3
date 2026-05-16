@@ -16,10 +16,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Please select a valid image file' }, { status: 400 });
     }
 
-    if (!['image/jpeg', 'image/jpg'].includes(image.type)) {
-      return NextResponse.json({ error: 'Only JPG/JPEG images are allowed' }, { status: 400 });
-    }
-
     if (image.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: 'Image size must be less than 5MB' }, { status: 400 });
     }

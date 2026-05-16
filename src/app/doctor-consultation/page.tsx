@@ -147,7 +147,8 @@ function formatFeeLabel(fee?: number, selectedCountry?: CountryCode) {
 
 export default function DoctorConsultationPage() {
   const router = useRouter();
-  const isImageUrl = (value?: string) => !!value && /^(https?:\/\/|\/)/i.test(value);
+  const isImageUrl = (value?: string) =>
+    !!value && /^(https?:\/\/|\/|data:image\/|blob:)/i.test(value);
 
   const [activeTab, setActiveTab] = useState<'find' | 'mine'>('find');
   const [sortOrder, setSortOrder] = useState('featured');
@@ -935,8 +936,16 @@ export default function DoctorConsultationPage() {
                 <div className="rounded-2xl border border-emerald-100 bg-white p-4">
                   <div className="flex items-center gap-3">
                     <div className="h-14 w-14 rounded-2xl bg-emerald-100 text-3xl flex items-center justify-center overflow-hidden">
-                      {bookingDoctor.avatar || 'Dr'}
-                    </div>
+                    {isImageUrl(bookingDoctor.avatar) ? (
+                      <img
+                        src={bookingDoctor.avatar}
+                        alt={bookingDoctor.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="font-semibold text-slate-900">{bookingDoctor.avatar || 'Dr'}</span>
+                    )}
+                  </div>
                     <div className="min-w-0">
                       <p className="font-bold text-slate-900 truncate">{bookingDoctor.name}</p>
                       <p className="text-sm text-emerald-700 truncate">{bookingDoctor.specialization}</p>

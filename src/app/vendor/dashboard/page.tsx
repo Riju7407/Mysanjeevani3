@@ -580,8 +580,8 @@ export default function VendorDashboard() {
 
     setProfileError('');
 
-    if (!['image/jpeg', 'image/jpg'].includes(file.type)) {
-      setProfileError('Please select a JPG image');
+    if (!file.type.startsWith('image/')) {
+      setProfileError('Please select a valid image file');
       return;
     }
 
@@ -1242,7 +1242,7 @@ export default function VendorDashboard() {
               <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
-                  <span className="text-xs font-semibold text-gray-500">JPG only for profile image</span>
+                  <span className="text-xs font-semibold text-gray-500">Upload any supported image format for your profile</span>
                 </div>
 
                 <form onSubmit={handleUpdateVendorProfile} className="space-y-5">
@@ -1260,12 +1260,12 @@ export default function VendorDashboard() {
                         <div className="flex-1">
                           <input
                             type="file"
-                            accept=".jpg,.jpeg,image/jpeg"
+                            accept="image/*"
                             onChange={(e) => uploadVendorProfileImage(e.target.files?.[0] || undefined)}
                             disabled={profileImageUploading || profileSaving}
                             className="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
                           />
-                          <p className="mt-2 text-xs text-slate-500">Upload a JPG image first. It will be saved to Cloudinary and then stored in your profile.</p>
+                          <p className="mt-2 text-xs text-slate-500">Upload any supported image file. It will be saved to Cloudinary and then stored in your profile.</p>
                           {profileImageUploading && <p className="mt-2 text-xs font-medium text-blue-600">Uploading image...</p>}
                           {profileError && <p className="mt-2 text-xs font-medium text-red-600">{profileError}</p>}
                         </div>
