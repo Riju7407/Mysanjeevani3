@@ -377,7 +377,10 @@ export async function PUT(request: NextRequest) {
     
     // Handle new popularSections array (or fallback to legacy popularSection)
     if (Array.isArray(updateData.popularSections) && updateData.popularSections.length > 0) {
-      const filtered = updateData.popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s));
+      const filtered = updateData.popularSections.filter(
+        (s: unknown): s is string =>
+          typeof s === 'string' && ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s)
+      );
       if (filtered.length > 0) {
         updateData.popularSections = filtered;
         updateData.popularSection = filtered[0];
