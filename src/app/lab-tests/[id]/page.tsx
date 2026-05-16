@@ -860,7 +860,7 @@ export default function LabTestDetailsPage() {
                           collectionDate: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     />
                   </div>
 
@@ -877,7 +877,7 @@ export default function LabTestDetailsPage() {
                           collectionTime: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     >
                       <option value="">Select time slot</option>
                       {slotOptions.map((slot) => (
@@ -914,7 +914,7 @@ export default function LabTestDetailsPage() {
                             address: e.target.value,
                           })
                         }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                         rows={3}
                       />
                     </div>
@@ -938,7 +938,7 @@ export default function LabTestDetailsPage() {
                               patientPincode: e.target.value.replace(/\D/g, '').slice(0, 6),
                             })
                           }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                          className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                         />
                         {isThyrocareTest && isServiceabilityChecking && (
                           <p className="mt-1 text-xs text-emerald-700">Checking pincode serviceability...</p>
@@ -968,7 +968,7 @@ export default function LabTestDetailsPage() {
                                 patientAge: e.target.value,
                               })
                             }
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                           />
                         </div>
                         <div>
@@ -983,7 +983,7 @@ export default function LabTestDetailsPage() {
                                 patientGender: e.target.value as 'MALE' | 'FEMALE' | 'OTHER',
                               })
                             }
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                           >
                             <option value="MALE">Male</option>
                             <option value="FEMALE">Female</option>
@@ -1008,7 +1008,7 @@ export default function LabTestDetailsPage() {
                           notes: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                      className="w-full border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                       rows={2}
                     />
                   </div>

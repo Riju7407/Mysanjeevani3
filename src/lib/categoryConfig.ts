@@ -36,9 +36,21 @@ function sortByOrderThenName(a: NodeDoc, b: NodeDoc): number {
   return a.name.localeCompare(b.name);
 }
 
+const PRODUCT_ROOT_NAMES = ['Product Types', 'Product Type', 'Products'];
+const DISEASE_ROOT_NAMES = ['Disease Categories', 'Disease'];
+
 function findFirstByName(nodes: NodeDoc[], name: string): NodeDoc | undefined {
   const target = name.toLowerCase();
   return nodes.find((node) => node.name.toLowerCase() === target);
+}
+
+function findFirstByNames(nodes: NodeDoc[], names: string[]): NodeDoc | undefined {
+  const normalizedNames = names.map((name) => name.toLowerCase());
+  return nodes.find((node) => normalizedNames.includes(node.name.toLowerCase()));
+}
+
+function isDiseaseRootName(name: string): boolean {
+  return DISEASE_ROOT_NAMES.some((alias) => alias.toLowerCase() === name.toLowerCase());
 }
 
 function getChildren(nodes: NodeDoc[], parentId: string | null): NodeDoc[] {
@@ -55,8 +67,8 @@ function buildFromNodes(nodes: NodeDoc[]): CategoryConfig {
   const vendorCategoryMap: Record<string, string[]> = {};
   const subcategoryMapByType: Record<string, Record<string, string[]>> = {};
 
-  const productRoot = findFirstByName(nodes, 'Product Types');
-  const diseaseRoot = findFirstByName(nodes, 'Disease Categories');
+  const productRoot = findFirstByNames(nodes, PRODUCT_ROOT_NAMES);
+  const diseaseRoot = findFirstByNames(nodes, DISEASE_ROOT_NAMES);
 
   // Get root-level nodes (those with parentId === null)
   const rootLevelNodes = getChildren(nodes, null);
@@ -82,7 +94,7 @@ function buildFromNodes(nodes: NodeDoc[]): CategoryConfig {
   } else {
     // If no "Product Types" root, treat other root-level categories as product types
     for (const rootNode of rootLevelNodes) {
-      if (rootNode.name === 'Disease Categories') continue; // Skip disease root
+      if (isDiseaseRootName(rootNode.name)) continue; // Skip disease root aliases
 
       const children = getChildren(nodes, rootNode._id);
       if (children.length > 0) {
@@ -128,33 +140,29 @@ export async function getCategoryConfig(): Promise<CategoryConfig> {
   const docs = normalizeDocs(raw);
   const dynamic = buildFromNodes(docs);
 
-  const hasDynamic = Object.keys(dynamic.vendorCategoryMap).length > 0;
-  if (!hasDynamic) {
-    return {
-      vendorCategoryMap: { ...FALLBACK_VENDOR_CATEGORY_MAP } as unknown as Record<string, string[]>,
-      subcategoryMapByType: { ...FALLBACK_SUBCATEGORY_MAP_BY_TYPE } as unknown as Record<string, Record<string, string[]>>,
-      diseaseSubcategoryMap: { ...FALLBACK_DISEASE_SUBCATEGORY_MAP } as unknown as Record<string, string[]>,
-      labCategories: [...FALLBACK_LAB_CATEGORIES] as unknown as string[],
-    };
-  }
+  const hasDynamicVendorMap = Object.keys(dynamic.vendorCategoryMap).length > 0;
+  const hasDynamicSubcategoryMap = Object.keys(dynamic.subcategoryMapByType).length > 0;
+  const hasDynamicDiseaseMap = Object.keys(dynamic.diseaseSubcategoryMap).length > 0;
 
   return {
-    vendorCategoryMap: {
-      ...FALLBACK_VENDOR_CATEGORY_MAP,
-      ...dynamic.vendorCategoryMap,
-    } as unknown as Record<string, string[]>,
-    subcategoryMapByType: {
-      ...FALLBACK_SUBCATEGORY_MAP_BY_TYPE,
-      ...dynamic.subcategoryMapByType,
-    } as unknown as Record<string, Record<string, string[]>>,
-    diseaseSubcategoryMap:
-      Object.keys(dynamic.diseaseSubcategoryMap).length > 0
-        ? dynamic.diseaseSubcategoryMap
-        : ({ ...FALLBACK_DISEASE_SUBCATEGORY_MAP } as unknown as Record<string, string[]>),
-    labCategories:
-      dynamic.labCategories.length > 0
-        ? dynamic.labCategories
-        : ([...FALLBACK_LAB_CATEGORIES] as unknown as string[]),
+    vendorCategoryMap: hasDynamicVendorMap
+      ? ({
+          ...FALLBACK_VENDOR_CATEGORY_MAP,
+          ...dynamic.vendorCategoryMap,
+        } as unknown as Record<string, string[]>)
+      : ({ ...FALLBACK_VENDOR_CATEGORY_MAP } as unknown as Record<string, string[]>),
+    subcategoryMapByType: hasDynamicSubcategoryMap
+      ? ({
+          ...FALLBACK_SUBCATEGORY_MAP_BY_TYPE,
+          ...dynamic.subcategoryMapByType,
+        } as unknown as Record<string, Record<string, string[]>>)
+      : ({ ...FALLBACK_SUBCATEGORY_MAP_BY_TYPE } as unknown as Record<string, Record<string, string[]>>),
+    diseaseSubcategoryMap: hasDynamicDiseaseMap
+      ? dynamic.diseaseSubcategoryMap
+      : ({ ...FALLBACK_DISEASE_SUBCATEGORY_MAP } as unknown as Record<string, string[]>),
+    labCategories: dynamic.labCategories.length > 0
+      ? dynamic.labCategories
+      : ([...FALLBACK_LAB_CATEGORIES] as unknown as string[]),
   };
 }
 

@@ -4,6 +4,35 @@ import { Product } from '@/lib/models/Product';
 import { generateProductId } from '@/lib/utils/productIdGenerator';
 import { fetchPartnerCatalog } from '@/lib/labPartners';
 
+async function fetchActiveVendorProducts(query: any, page: number, limit: number) {
+  const pipeline: any[] = [
+    { $match: query },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendor',
+      },
+    },
+    { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+    {
+      $match: {
+        $or: [
+          { vendor: null },
+          { 'vendor.isActive': true },
+        ],
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: { vendor: 0 } },
+  ];
+
+  return Product.aggregate(pipeline);
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -25,12 +54,29 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const localTests = await Product.find(query)
-      .limit(limit)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+    const localTests = await fetchActiveVendorProducts(query, page, limit);
 
-    const localTotal = await Product.countDocuments(query);
+    const localTotal = await Product.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendor',
+        },
+      },
+      { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          $or: [
+            { vendor: null },
+            { 'vendor.isActive': true },
+          ],
+        },
+      },
+      { $count: 'total' },
+    ]).then((result) => result[0]?.total || 0);
     const partnerTests = await fetchPartnerCatalog({
       category: category || undefined,
       search: search || undefined,

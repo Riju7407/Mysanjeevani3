@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
         { specialization: { $regex: search, $options: 'i' } },
         { department: { $regex: search, $options: 'i' } },
       ];
-      delete query.isAvailable; // show all when searching
     }
 
     const doctors = await Doctor.find(query).sort({ rating: -1 }).lean();

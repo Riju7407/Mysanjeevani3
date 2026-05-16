@@ -68,6 +68,7 @@ export default function DoctorPanelPage() {
   const [profileImageUploading, setProfileImageUploading] = useState(false);
   const [profileImageError, setProfileImageError] = useState('');
   const [profileImagePreview, setProfileImagePreview] = useState('');
+  const [localUserProfileImage, setLocalUserProfileImage] = useState('');
   const [newAvailableDate, setNewAvailableDate] = useState('');
   const [datesSaving, setDatesSaving] = useState(false);
   const [datesFeedback, setDatesFeedback] = useState('');
@@ -108,6 +109,7 @@ export default function DoctorPanelPage() {
     }
 
     setUser(parsedUser);
+    setLocalUserProfileImage(parsedUser.profileImage || parsedUser.avatar || '');
     fetchDoctorPanelData(parsedUser.email);
   }, [router]);
 
@@ -134,7 +136,7 @@ export default function DoctorPanelPage() {
           qualification: data.doctor.qualification || '',
           consultationFee: data.doctor.consultationFee || 0,
           availableDates: Array.isArray(data.doctor.availableDates) ? data.doctor.availableDates : [],
-          avatar: data.doctor.avatar || '👨‍⚕️',
+          avatar: data.doctor.avatar || '',
           bio: data.doctor.bio || '',
           isAvailable: data.doctor.isAvailable !== false,
         });
@@ -190,7 +192,8 @@ export default function DoctorPanelPage() {
 
   const isImageUrl = (value?: string) =>
     !!value && /^(https?:\/\/|\/|data:image\/|blob:)/i.test(value);
-  const dashboardAvatar = profileImagePreview || profileForm.avatar || doctorProfile?.avatar || '';
+  const dashboardAvatar =
+    profileImagePreview || doctorProfile?.avatar || localUserProfileImage || profileForm.avatar || '';
 
   const uploadDoctorProfileImage = async (file?: File) => {
     if (!file) return;
@@ -263,6 +266,41 @@ export default function DoctorPanelPage() {
       setShowProfileModal(false);
     } catch (error: any) {
       setProfileError(error.message || 'Failed to update profile');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const toggleAvailability = async () => {
+    if (!user?.email) return;
+    setProfileSaving(true);
+    setProfileError('');
+    try {
+      const rawUser = localStorage.getItem('user');
+      const parsedUser = rawUser ? JSON.parse(rawUser) : null;
+      const role = parsedUser?.role || 'doctor';
+
+      const res = await fetch('/api/doctor/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': role,
+        },
+        body: JSON.stringify({
+          email: user.email,
+          isAvailable: !profileForm.isAvailable,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update availability');
+
+      setProfileForm((prev) => ({ ...prev, isAvailable: !prev.isAvailable }));
+      setDoctorProfile((prev) => ({
+        ...(prev as any),
+        isAvailable: !profileForm.isAvailable,
+      }));
+    } catch (error: any) {
+      setProfileError(error.message || 'Failed to update availability');
     } finally {
       setProfileSaving(false);
     }
@@ -465,36 +503,45 @@ export default function DoctorPanelPage() {
             <div className="text-right">
               <p className="text-xs text-slate-500">Today</p>
               <p className="text-sm font-semibold text-slate-900">{new Date().toLocaleDateString('en-GB')}</p>
-              <button
-                onClick={handleLogout}
-                className="mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                Logout
-              </button>
-              <Link
-                href="/profile"
-                className="mt-2 inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700 font-medium hover:bg-emerald-100"
-              >
-                My Profile
-              </Link>
-              <Link
-                href="/profile/support"
-                className="mt-2 inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700 font-medium hover:bg-blue-100"
-              >
-                Support Center
-              </Link>
-              <Link
-                href="/doctor/wallet"
-                className="mt-2 inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-indigo-700 font-medium hover:bg-indigo-100"
-              >
-                💰 My Wallet
-              </Link>
-              <Link
-                href="/doctor/prescriptions"
-                className="mt-2 inline-flex items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-purple-700 font-medium hover:bg-purple-100"
-              >
-                📋 Prescriptions
-              </Link>
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-white font-medium hover:bg-red-700"
+                >
+                  Logout
+                </button>
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700"
+                >
+                  My Profile
+                </Link>
+                <Link
+                  href="/profile/support"
+                  className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-white font-medium hover:bg-sky-700"
+                >
+                  Support Center
+                </Link>
+                <Link
+                  href="/doctor/wallet"
+                  className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700"
+                >
+                  My Wallet
+                </Link>
+                <button
+                  type="button"
+                  onClick={toggleAvailability}
+                  className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white ${profileForm.isAvailable ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                >
+                  {profileForm.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
+                </button>
+                <Link
+                  href="/doctor/prescriptions"
+                  className="inline-flex items-center justify-center rounded-lg bg-violet-600 px-4 py-2 text-white font-medium hover:bg-violet-700"
+                >
+                  📋 Prescriptions
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -533,6 +580,18 @@ export default function DoctorPanelPage() {
                     <p className="text-sm text-slate-600">{doctorProfile?.email}</p>
                     <p className="text-xs text-slate-500 mt-2">
                       Who can edit profile: logged-in doctor (this account) and admin.
+                    </p>
+                    <p className="text-sm mt-2 text-slate-700">
+                      Status:{' '}
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          doctorProfile?.isAvailable
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {doctorProfile?.isAvailable ? 'Available' : 'Unavailable'}
+                      </span>
                     </p>
                   </div>
                 </div>

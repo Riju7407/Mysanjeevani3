@@ -131,10 +131,14 @@ export default function AdminCategoriesPage() {
   const [newRootName, setNewRootName] = useState('');
 
   const buildCategorySections = useCallback((nodes: CategoryTreeNode[]) => {
-    const productTypesRoot = nodes.find((node) => node.name === 'Product Types');
-    const diseaseRoot = nodes.find((node) => node.name === 'Disease Categories');
+    const productRootNames = ['product types', 'product type', 'products'];
+    const isProductRoot = (name: string) => productRootNames.includes(normalizeName(name));
+    const productTypesRoot = nodes.find((node) => isProductRoot(node.name));
+    const diseaseRoot = nodes.find(
+      (node) => normalizeName(node.name) === 'disease categories' || normalizeName(node.name) === 'disease'
+    );
     const otherRoots = nodes.filter(
-      (node) => node.name !== 'Product Types' && node.name !== 'Disease Categories'
+      (node) => !isProductRoot(node.name) && normalizeName(node.name) !== 'disease categories' && normalizeName(node.name) !== 'disease'
     );
 
     return {
@@ -145,7 +149,12 @@ export default function AdminCategoriesPage() {
   }, []);
 
   const categoryGroupSections = useMemo(() => {
-    const findSectionNode = (name: string) => findNodeByName(tree, name);
+    const findSectionNode = (name: string) => {
+      if (normalizeName(name) === 'disease') {
+        return findNodeByName(tree, 'Disease Categories') || findNodeByName(tree, 'Disease');
+      }
+      return findNodeByName(tree, name);
+    };
 
     return MANAGEMENT_CATEGORY_NAMES.map((categoryName) => {
       const node = findSectionNode(categoryName);
@@ -229,7 +238,7 @@ export default function AdminCategoriesPage() {
 
   const getGroupParentId = (groupName: string): string | null => {
     const productTypesRoot = findNodeByName(tree, 'Product Types');
-    const diseaseRoot = findNodeByName(tree, 'Disease Categories');
+    const diseaseRoot = findNodeByName(tree, 'Disease Categories') || findNodeByName(tree, 'Disease');
 
     if (normalizeName(groupName) === 'disease') {
       return diseaseRoot?._id ?? null;

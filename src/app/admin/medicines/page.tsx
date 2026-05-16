@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 import { useImageUpload } from '@/lib/hooks/useImageUpload';
 import MultiCategorySelect from '@/components/MultiCategorySelect';
 
@@ -381,7 +382,51 @@ function getDefaultCategoryForType(productType: VendorProductType): string {
   return VENDOR_CATEGORY_MAP[productType][0];
 }
 
-const EMPTY_PROD = { name: '', brand: '', category: '', subcategory: '', categoryPath: [] as string[], categories: [] as string[], extraCategoryPaths: [] as string[][], diseasePaths: [] as string[][], diseaseCategory: '', diseaseSubcategory: '', productType: 'Generic Medicine' as VendorProductType, price: '', usdPrice: '', mrp: '', stock: '', description: '', safetyInformation: '', specifications: '', benefit: '', requiresPrescription: false, image: '', popularSection: 'None', potency: '', quantity: '', quantityUnit: 'None' };
+const exportProductsToExcel = (products: Medicine[]) => {
+  const rows = products.map((product) => ({
+    'Product ID': product._id,
+    Name: product.name,
+    Brand: product.brand,
+    Category: product.category,
+    Subcategory: product.subcategory || '',
+    'Disease Category': product.diseaseCategory || '',
+    'Disease Subcategory': product.diseaseSubcategory || '',
+    'Product Type': product.productType || '',
+    'Vendor Name': product.vendorName || '',
+    'Vendor ID': product.vendorId || '',
+    Price: product.price,
+    'USD Price': product.usdPrice ?? '',
+    MRP: product.mrp ?? '',
+    Stock: product.stock,
+    'Requires Prescription': product.requiresPrescription ? 'Yes' : 'No',
+    'Approval Status': product.approvalStatus || '',
+    Description: product.description || '',
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Medicines');
+  const workbookBlob = new Blob([XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })], {
+    type: 'application/octet-stream',
+  });
+  const url = URL.createObjectURL(workbookBlob);
+  const element = document.createElement('a');
+  element.href = url;
+  element.download = `medicines-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+  URL.revokeObjectURL(url);
+};
+
+const POPULAR_SECTION_OPTIONS = [
+  { value: 'Generic', label: 'Popular Medicines' },
+  { value: 'Ayurveda', label: 'Popular Ayurveda Products' },
+  { value: 'Homeopathy', label: 'Popular Homeopathy Products' },
+  { value: 'LabTests', label: 'Popular Lab Tests' },
+];
+
+const EMPTY_PROD = { name: '', brand: '', category: '', subcategory: '', categoryPath: [] as string[], categories: [] as string[], extraCategoryPaths: [] as string[][], diseasePaths: [] as string[][], diseaseCategory: '', diseaseSubcategory: '', productType: 'Generic Medicine' as VendorProductType, price: '', usdPrice: '', mrp: '', stock: '', description: '', safetyInformation: '', specifications: '', benefit: '', requiresPrescription: false, image: '', popularSections: [] as string[], potency: '', quantity: '', quantityUnit: 'None' };
 const EMPTY_LAB  = { name: '', category: '', price: '', mrp: '', description: '', icon: '', duration: '', testsIncluded: '', popular: false };
 
 /**
@@ -520,9 +565,36 @@ export default function AdminMedicines() {
     return [];
   };
 
+  const normalizeExtraCategoryPath = (productType: string, path: string[]): string[] => {
+    if (path.length >= 4) return path.slice(0, 4);
+    if (path.length === 3) return [productType, ...path];
+    const normalized = [productType, ...path];
+    while (normalized.length < 4) normalized.push('');
+    return normalized;
+  };
+
+  const PRODUCT_TYPE_LABELS: Record<string, string> = {
+    'Generic Medicine': 'General Medicines',
+    'Ayurveda Medicine': 'Ayurveda',
+  };
+
+  const formatProductTypeLabel = (productType: string): string => PRODUCT_TYPE_LABELS[productType] || productType;
+
+  const normalizeExtraCategoryPaths = (productType: string, paths: string[][]): string[][] =>
+    paths.map((path) => normalizeExtraCategoryPath(productType, path));
+
   const getExtraPathOptions = (productType: string, path: string[], levelIdx: number): string[] => {
     if (levelIdx === 0) {
-      return getNodeChildren(productType);
+      const productTypes = getNodeChildren(null);
+      return productTypes.length > 0 ? productTypes : (Object.keys(activeVendorCategoryMap) as string[]);
+    }
+
+    const selectedProductType = path[0] || productType;
+
+    if (levelIdx === 1) {
+      const treeOptions = getNodeChildren(selectedProductType);
+      if (treeOptions.length > 0) return treeOptions;
+      return activeVendorCategoryMap[selectedProductType] || [];
     }
 
     const parent = path[levelIdx - 1];
@@ -531,8 +603,8 @@ export default function AdminMedicines() {
     const treeOptions = getNodeChildren(parent);
     if (treeOptions.length > 0) return treeOptions;
 
-    if (levelIdx === 1) {
-      return getSubcategoryOptionsForType(productType, path[0] || '');
+    if (levelIdx === 2) {
+      return getSubcategoryOptionsForType(selectedProductType, path[1] || '');
     }
 
     return [];
@@ -619,15 +691,17 @@ export default function AdminMedicines() {
     const category = m.category || (categories.length > 0 ? getCategoryName(categories[0]) : '');
     const subcategory = m.subcategory || (categories.length > 1 ? getCategoryName(categories[1]) : '');
     const categoryPath = category ? (subcategory ? [category, subcategory] : [category]) : [];
-    const existingPopularSection =
-      (m as any).popularSection ||
-      ((m as any).isPopularGeneric ? 'Generic' :
-       (m as any).isPopularAyurveda ? 'Ayurveda' :
-       (m as any).isPopularHomeopathy ? 'Homeopathy' :
-       (m as any).isPopularLabTests ? 'LabTests' :
-       (m as any).isPopular ? 'Generic' :
-       'None');
-    setProdForm({ name: m.name, brand: m.brand || '', category, subcategory, categories, categoryPath, extraCategoryPaths: Array.isArray((m as any).extraCategoryPaths) ? (m as any).extraCategoryPaths : [], diseasePaths: Array.isArray((m as any).diseasePaths) ? (m as any).diseasePaths : ((m.diseaseCategory || m.diseaseSubcategory) ? [[m.diseaseCategory || '', m.diseaseSubcategory || '']] : []), diseaseCategory: m.diseaseCategory || '', diseaseSubcategory: m.diseaseSubcategory || '', productType: productType as VendorProductType, price: String(m.price), usdPrice: String((m as any).usdPrice || ''), mrp: String(m.mrp || ''), stock: String(m.stock), description: m.description || '', safetyInformation: (m as any).safetyInformation || '', specifications: (m as any).specifications || '', benefit: m.benefit || '', requiresPrescription: m.requiresPrescription || false, image: m.image || '', popularSection: existingPopularSection, potency: (m as any).potency || '', quantity: (m as any).quantity || '', quantityUnit: (m as any).quantityUnit || 'None' });
+    const existingPopularSections: string[] = [];
+    if ((m as any).popularSections && Array.isArray((m as any).popularSections)) {
+      existingPopularSections.push(...(m as any).popularSections);
+    } else {
+      if ((m as any).isPopularGeneric) existingPopularSections.push('Generic');
+      if ((m as any).isPopularAyurveda) existingPopularSections.push('Ayurveda');
+      if ((m as any).isPopularHomeopathy) existingPopularSections.push('Homeopathy');
+      if ((m as any).isPopularLabTests) existingPopularSections.push('LabTests');
+      if ((m as any).isPopular && existingPopularSections.length === 0) existingPopularSections.push('Generic');
+    }
+    setProdForm({ name: m.name, brand: m.brand || '', category, subcategory, categories, categoryPath, extraCategoryPaths: normalizeExtraCategoryPaths(productType, Array.isArray((m as any).extraCategoryPaths) ? (m as any).extraCategoryPaths : []), diseasePaths: Array.isArray((m as any).diseasePaths) ? (m as any).diseasePaths : ((m.diseaseCategory || m.diseaseSubcategory) ? [[m.diseaseCategory || '', m.diseaseSubcategory || '']] : []), diseaseCategory: m.diseaseCategory || '', diseaseSubcategory: m.diseaseSubcategory || '', productType: productType as VendorProductType, price: String(m.price), usdPrice: String((m as any).usdPrice || ''), mrp: String(m.mrp || ''), stock: String(m.stock), description: m.description || '', safetyInformation: (m as any).safetyInformation || '', specifications: (m as any).specifications || '', benefit: m.benefit || '', requiresPrescription: m.requiresPrescription || false, image: m.image || '', popularSections: existingPopularSections, potency: (m as any).potency || '', quantity: (m as any).quantity || '', quantityUnit: (m as any).quantityUnit || 'None' });
     setImages(m.images || []);
     setShowProdForm(true);
   };
@@ -655,7 +729,7 @@ export default function AdminMedicines() {
         }
       }
       
-      const payload = { name: prodForm.name, brand: prodForm.brand, category: prodForm.categoryPath[0] || prodForm.category, subcategory: prodForm.categoryPath[1] || prodForm.subcategory || undefined, categories: prodForm.categoryPath, extraCategoryPaths: (prodForm.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0), diseasePaths: prodForm.diseasePaths || [], diseaseCategory: prodForm.diseasePaths?.[0]?.[0] || prodForm.diseaseCategory || undefined, diseaseSubcategory: prodForm.diseasePaths?.[0]?.[1] || prodForm.diseaseSubcategory || undefined, productType: prodForm.productType || 'Generic Medicine', price: Number(prodForm.price), usdPrice: Number(prodForm.usdPrice), mrp: prodForm.mrp ? Number(prodForm.mrp) : undefined, stock: Number(prodForm.stock) || 0, description: prodForm.description, safetyInformation: prodForm.safetyInformation || undefined, specifications: prodForm.specifications || undefined, benefit: prodForm.benefit || undefined, requiresPrescription: prodForm.requiresPrescription, images: images, image: images.length > 0 ? images[0] : undefined, isActive: true, popularSection: prodForm.popularSection || 'None' };
+      const payload = { name: prodForm.name, brand: prodForm.brand, category: prodForm.categoryPath[0] || prodForm.category, subcategory: prodForm.categoryPath[1] || prodForm.subcategory || undefined, categories: prodForm.categoryPath, extraCategoryPaths: (prodForm.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0), diseasePaths: prodForm.diseasePaths || [], diseaseCategory: prodForm.diseasePaths?.[0]?.[0] || prodForm.diseaseCategory || undefined, diseaseSubcategory: prodForm.diseasePaths?.[0]?.[1] || prodForm.diseaseSubcategory || undefined, productType: prodForm.productType || 'Generic Medicine', price: Number(prodForm.price), usdPrice: Number(prodForm.usdPrice), mrp: prodForm.mrp ? Number(prodForm.mrp) : undefined, stock: Number(prodForm.stock) || 0, description: prodForm.description, safetyInformation: prodForm.safetyInformation || undefined, specifications: prodForm.specifications || undefined, benefit: prodForm.benefit || undefined, requiresPrescription: prodForm.requiresPrescription, images: images, image: images.length > 0 ? images[0] : undefined, isActive: true, popularSections: prodForm.popularSections || [] };
       if (editMed) await fetch(`/api/admin/products/${editMed._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       else await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       setShowProdForm(false); setEditMed(null); setImages([]); await fetchProducts();
@@ -1006,9 +1080,10 @@ export default function AdminMedicines() {
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button onClick={openAddProd} className="bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-6 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all whitespace-nowrap">+ Add Product</button>
                 <button onClick={() => setShowBulkUpload((s) => !s)} className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 font-medium transition-colors">📥 Bulk Upload</button>
+                <button onClick={() => exportProductsToExcel(filteredMeds)} className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 font-medium transition-colors">📤 Export XLSX</button>
               </div>
             </div>
 
@@ -1198,19 +1273,19 @@ export default function AdminMedicines() {
                     <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
                       <div>
                         <label className="text-sm font-semibold text-slate-800">Additional Category Paths (Optional)</label>
-                        <p className="text-xs text-slate-500">Add one or more extra category {'>'} subcategory {'>'} next category paths without changing the main selector above.</p>
+                        <p className="text-xs text-slate-500">Add one or more extra product type {'>'} category {'>'} subcategory {'>'} next category paths without changing the main selector above.</p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setProdForm({ ...prodForm, extraCategoryPaths: [...(prodForm.extraCategoryPaths || []), ['', '', '']] })}
+                        onClick={() => setProdForm({ ...prodForm, extraCategoryPaths: [...(prodForm.extraCategoryPaths || []), ['', '', '', '']] })}
                         className="text-emerald-700 hover:text-emerald-900 text-sm font-medium"
                       >
                         + Add Path
                       </button>
                     </div>
                     {(prodForm.extraCategoryPaths || []).map((path, idx) => (
-                      <div key={`extra-category-${idx}`} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                        {[0, 1, 2].map((levelIdx) => {
+                      <div key={`extra-category-${idx}`} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                        {[0, 1, 2, 3].map((levelIdx) => {
                           const options = getExtraPathOptions(prodForm.productType || 'Generic Medicine', path, levelIdx);
                           return (
                             <select
@@ -1225,9 +1300,9 @@ export default function AdminMedicines() {
                               }}
                               className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                             >
-                              <option value="">{levelIdx === 0 ? 'Extra Category' : levelIdx === 1 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
+                              <option value="">{levelIdx === 0 ? 'Extra Product Type' : levelIdx === 1 ? 'Extra Category' : levelIdx === 2 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
                               {options.map((opt) => (
-                                <option key={opt} value={opt}>{opt}</option>
+                                <option key={opt} value={opt}>{levelIdx === 0 ? formatProductTypeLabel(opt) : opt}</option>
                               ))}
                             </select>
                           );
@@ -1328,17 +1403,24 @@ export default function AdminMedicines() {
                 {/* Popular Section Checkboxes */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                   <label className="block text-sm font-semibold text-slate-900 mb-3">Display in Popular Sections</label>
-                  <select
-                    value={prodForm.popularSection}
-                    onChange={(e) => setProdForm({ ...prodForm, popularSection: e.target.value as 'None' | 'Generic' | 'Ayurveda' | 'Homeopathy' | 'LabTests' })}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
-                  >
-                    <option value="None">None</option>
-                    <option value="Generic">Popular Medicines</option>
-                    <option value="Ayurveda">Popular Ayurveda Products</option>
-                    <option value="Homeopathy">Popular Homeopathy Products</option>
-                    <option value="LabTests">Popular Lab Tests</option>
-                  </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {POPULAR_SECTION_OPTIONS.map((option) => (
+                      <label key={option.value} className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-blue-300 hover:bg-blue-100 transition-colors bg-white">
+                        <input
+                          type="checkbox"
+                          checked={prodForm.popularSections?.includes(option.value) || false}
+                          onChange={(e) => {
+                            const updatedSections = e.target.checked
+                              ? [...(prodForm.popularSections || []), option.value]
+                              : (prodForm.popularSections || []).filter((s) => s !== option.value);
+                            setProdForm({ ...prodForm, popularSections: updatedSections });
+                          }}
+                          className="w-5 h-5 rounded border-slate-300 accent-emerald-600"
+                        />
+                        <span className="text-sm font-medium text-slate-700">{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button onClick={saveProd} disabled={medSaving || imageUploading} className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white px-6 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-60">{medSaving ? 'Saving...' : editMed ? 'Update Product' : 'Add Product'}</button>

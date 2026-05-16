@@ -28,9 +28,9 @@ export async function GET(
       _id: isNumericId ? numericId : normalizedId,
       isActive: true,
       $or: [{ approvalStatus: 'approved' }, { approvalStatus: { $exists: false } }],
-    });
+    }).populate({ path: 'vendorId', select: 'isActive' });
 
-    if (!product) {
+    if (!product || (product.vendorId && typeof product.vendorId === 'object' && 'isActive' in product.vendorId && (product.vendorId as any).isActive === false)) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 

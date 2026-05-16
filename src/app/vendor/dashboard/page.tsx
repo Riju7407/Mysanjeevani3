@@ -21,6 +21,7 @@ interface VendorInfo {
     country?: string;
   };
   status: string;
+  isActive?: boolean;
   rating?: number;
   totalOrders?: number;
   commissionPercentage?: number;
@@ -346,7 +347,7 @@ export default function VendorDashboard() {
     isPopularAyurveda: false,
     isPopularHomeopathy: false,
     isPopularLabTests: false,
-    popularSection: 'None',
+    popularSections: [] as string[],
     stock: '',
     image: '',
   });
@@ -375,7 +376,7 @@ export default function VendorDashboard() {
     diseaseSubcategory: '',
     benefit: '',
     requiresPrescription: false,
-    popularSection: 'None',
+    popularSections: [] as string[],
     stock: '',
     image: '',
   });
@@ -461,9 +462,36 @@ export default function VendorDashboard() {
     return [];
   };
 
+  const normalizeExtraCategoryPath = (productType: string, path: string[]): string[] => {
+    if (path.length >= 4) return path.slice(0, 4);
+    if (path.length === 3) return [productType, ...path];
+    const normalized = [productType, ...path];
+    while (normalized.length < 4) normalized.push('');
+    return normalized;
+  };
+
+  const PRODUCT_TYPE_LABELS: Record<string, string> = {
+    'Generic Medicine': 'General Medicines',
+    'Ayurveda Medicine': 'Ayurveda',
+  };
+
+  const formatProductTypeLabel = (productType: string): string => PRODUCT_TYPE_LABELS[productType] || productType;
+
+  const normalizeExtraCategoryPaths = (productType: string, paths: string[][]): string[][] =>
+    paths.map((path) => normalizeExtraCategoryPath(productType, path));
+
   const getExtraPathOptions = (productType: string, path: string[], levelIdx: number): string[] => {
     if (levelIdx === 0) {
-      return getNodeChildren(productType, categoryTree);
+      const productTypes = getNodeChildren(null, categoryTree);
+      return productTypes.length > 0 ? productTypes : (Object.keys(activeVendorCategoryMap) as string[]);
+    }
+
+    const selectedProductType = path[0] || productType;
+
+    if (levelIdx === 1) {
+      const treeOptions = getNodeChildren(selectedProductType, categoryTree);
+      if (treeOptions.length > 0) return treeOptions;
+      return activeVendorCategoryMap[selectedProductType] || [];
     }
 
     const parent = path[levelIdx - 1];
@@ -472,8 +500,8 @@ export default function VendorDashboard() {
     const treeOptions = getNodeChildren(parent, categoryTree);
     if (treeOptions.length > 0) return treeOptions;
 
-    if (levelIdx === 1) {
-      return getSubcategoryOptionsForType(productType, path[0] || '');
+    if (levelIdx === 2) {
+      return getSubcategoryOptionsForType(selectedProductType, path[1] || '');
     }
 
     return [];
@@ -572,6 +600,35 @@ export default function VendorDashboard() {
       }
     } catch (error) {
       console.error('Error fetching vendor profile:', error);
+    }
+  };
+
+  const toggleVendorVisibility = async () => {
+    if (!vendorInfo?._id) return;
+
+    const nextActiveState = vendorInfo.isActive !== false;
+
+    try {
+      const response = await fetch('/api/vendor/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vendorId: vendorInfo._id,
+          isActive: !nextActiveState,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update vendor visibility');
+
+      const updatedVendor = data.vendor ? data.vendor : { ...vendorInfo, isActive: !nextActiveState };
+      setVendorInfo(updatedVendor);
+      localStorage.setItem('vendorInfo', JSON.stringify(updatedVendor));
+      window.dispatchEvent(new Event('storage'));
+    } catch (error) {
+      console.error('Error updating vendor visibility:', error);
     }
   };
 
@@ -800,7 +857,7 @@ export default function VendorDashboard() {
           subcategory: newProduct.categoryPath[1] || newProduct.subcategory || undefined,
           categories: newProduct.categoryPath,
           extraCategoryPaths: (newProduct.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0),
-          popularSection: newProduct.popularSection || 'None',
+          popularSections: newProduct.popularSections || [],
           diseasePaths: newProduct.diseasePaths || [],
           diseaseCategory: newProduct.diseasePaths?.[0]?.[0] || newProduct.diseaseCategory || undefined,
           diseaseSubcategory: newProduct.diseasePaths?.[0]?.[1] || newProduct.diseaseSubcategory || undefined,
@@ -894,7 +951,7 @@ export default function VendorDashboard() {
       category: normalizedCategory,
       categoryPath: editCategoryPath,
       categories: (product as any).categories || [],
-      extraCategoryPaths: Array.isArray((product as any).extraCategoryPaths) ? (product as any).extraCategoryPaths : [],
+      extraCategoryPaths: normalizeExtraCategoryPaths(inferredProductType, Array.isArray((product as any).extraCategoryPaths) ? (product as any).extraCategoryPaths : []),
       subcategory: product.subcategory || (
         isHomeopathy ? getDefaultSubcategoryForTypeDynamic(inferredProductType, normalizedCategory)
           : isAyurveda ? getDefaultSubcategoryForTypeDynamic(inferredProductType, normalizedCategory)
@@ -986,7 +1043,7 @@ export default function VendorDashboard() {
           subcategory: editProduct.categoryPath?.[1] || editProduct.subcategory || undefined,
           potency: editProduct.potency || undefined,
           quantityUnit: editProduct.quantityUnit || 'None',
-          popularSection: editProduct.popularSection || 'None',
+          popularSections: editProduct.popularSections || [],
           diseasePaths: editProduct.diseasePaths || [],
           diseaseCategory: editProduct.diseasePaths?.[0]?.[0] || editProduct.diseaseCategory || undefined,
           diseaseSubcategory: editProduct.diseasePaths?.[0]?.[1] || editProduct.diseaseSubcategory || undefined,
@@ -1084,6 +1141,12 @@ export default function VendorDashboard() {
                   <p className="text-gray-600 text-sm mt-1">
                     Status: <span className="font-semibold text-emerald-600">{vendorInfo.status}</span>
                   </p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Visibility:{' '}
+                    <span className={`font-semibold ${vendorInfo.isActive === false ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {vendorInfo.isActive === false ? 'Inactive' : 'Active'}
+                    </span>
+                  </p>
                   {vendorInfo.status === 'verified' && (
                     <p className="text-gray-600 text-sm">
                       Rating: ⭐ {vendorInfo.rating || 'Not rated yet'}
@@ -1116,8 +1179,15 @@ export default function VendorDashboard() {
                   href="/vendor/wallet"
                   className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
                 >
-                  💰 My Wallet
+                  My Wallet
                 </Link>
+                <button
+                  type="button"
+                  onClick={toggleVendorVisibility}
+                  className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold text-white ${vendorInfo?.isActive === false ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-500 hover:bg-orange-600'}`}
+                >
+                  {vendorInfo?.isActive === false ? 'Activate Store' : 'Deactivate Store'}
+                </button>
                 <button
                   onClick={() => setTab('orders')}
                   className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
@@ -1132,14 +1202,6 @@ export default function VendorDashboard() {
                 </Link>
               </div>
             </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/vendor/dashboard/lab-bookings"
-              className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-            >
-              View Lab Booking History
-            </Link>
           </div>
         </div>
 
@@ -1278,7 +1340,7 @@ export default function VendorDashboard() {
                       value={profileForm.vendorName}
                       onChange={handleProfileFieldChange}
                       placeholder="Vendor / Shop Name"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     />
                     <input
@@ -1287,14 +1349,14 @@ export default function VendorDashboard() {
                       value={profileForm.phone}
                       onChange={handleProfileFieldChange}
                       placeholder="Phone Number"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     />
                     <select
                       name="businessType"
                       value={profileForm.businessType}
                       onChange={handleProfileFieldChange}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     >
                       <option value="pharmacy">Pharmacy</option>
@@ -1310,7 +1372,7 @@ export default function VendorDashboard() {
                       value={profileForm.country}
                       onChange={handleProfileFieldChange}
                       placeholder="Country"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     />
                     <input
@@ -1319,7 +1381,7 @@ export default function VendorDashboard() {
                       value={profileForm.street}
                       onChange={handleProfileFieldChange}
                       placeholder="Street Address"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-2"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-2"
                       required
                     />
                     <input
@@ -1328,7 +1390,7 @@ export default function VendorDashboard() {
                       value={profileForm.city}
                       onChange={handleProfileFieldChange}
                       placeholder="City"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     />
                     <input
@@ -1337,7 +1399,7 @@ export default function VendorDashboard() {
                       value={profileForm.state}
                       onChange={handleProfileFieldChange}
                       placeholder="State"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     />
                     <input
@@ -1346,7 +1408,7 @@ export default function VendorDashboard() {
                       value={profileForm.pincode}
                       onChange={handleProfileFieldChange}
                       placeholder="Pincode"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                       required
                     />
                     <textarea
@@ -1355,7 +1417,7 @@ export default function VendorDashboard() {
                       onChange={handleProfileFieldChange}
                       placeholder="Business description"
                       rows={4}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-2"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-2"
                     />
                   </div>
 
@@ -1537,7 +1599,7 @@ export default function VendorDashboard() {
                       value={newProduct.name}
                       onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                       required
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <select
                       value={newProduct.productType}
@@ -1552,7 +1614,7 @@ export default function VendorDashboard() {
                           subcategory: '',
                         });
                       }}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     >
                       {productTypeOptions.map((productType) => (
                         <option key={productType} value={productType}>{productType}</option>
@@ -1602,7 +1664,7 @@ export default function VendorDashboard() {
                                   subcategory: newPath[1] || '',
                                 });
                               }}
-                              className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                              className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                             >
                               <option value="">{levelIdx === 0 ? 'Select Category' : `Level ${levelIdx + 1}`}</option>
                               {options.map((opt) => (
@@ -1617,19 +1679,19 @@ export default function VendorDashboard() {
                       <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
                         <div>
                           <label className="text-sm font-semibold text-slate-800">Additional Category Paths (Optional)</label>
-                          <p className="text-xs text-slate-500">Add one or more extra category &gt; subcategory &gt; next category paths without changing the main selector above.</p>
+                          <p className="text-xs text-slate-500">Add one or more extra product type &gt; category &gt; subcategory &gt; next category paths without changing the main selector above.</p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setNewProduct({ ...newProduct, extraCategoryPaths: [...(newProduct.extraCategoryPaths || []), ['', '', '']] })}
+                          onClick={() => setNewProduct({ ...newProduct, extraCategoryPaths: [...(newProduct.extraCategoryPaths || []), ['', '', '', '']] })}
                           className="text-emerald-700 hover:text-emerald-900 text-sm font-medium"
                         >
                           + Add Path
                         </button>
                       </div>
                       {(newProduct.extraCategoryPaths || []).map((path, idx) => (
-                        <div key={`extra-category-${idx}`} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                          {[0, 1, 2].map((levelIdx) => {
+                        <div key={`extra-category-${idx}`} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                          {[0, 1, 2, 3].map((levelIdx) => {
                             const options = getExtraPathOptions(newProduct.productType || 'Generic Medicine', path, levelIdx);
                             return (
                               <select
@@ -1642,11 +1704,11 @@ export default function VendorDashboard() {
                                   updated[idx] = nextPath;
                                   setNewProduct({ ...newProduct, extraCategoryPaths: updated });
                                 }}
-                                className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                                className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                               >
-                                <option value="">{levelIdx === 0 ? 'Extra Category' : levelIdx === 1 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
+                                <option value="">{levelIdx === 0 ? 'Extra Product Type' : levelIdx === 1 ? 'Extra Category' : levelIdx === 2 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
                                 {options.map((opt) => (
-                                  <option key={opt} value={opt}>{opt}</option>
+                                  <option key={opt} value={opt}>{levelIdx === 0 ? formatProductTypeLabel(opt) : opt}</option>
                                 ))}
                               </select>
                             );
@@ -1685,7 +1747,7 @@ export default function VendorDashboard() {
                               updated[idx] = [e.target.value, ''];
                               setNewProduct({ ...newProduct, diseasePaths: updated });
                             }}
-                            className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                            className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                           >
                             <option value="">Select Disease Category</option>
                             {Object.keys(activeDiseaseCategoryMap).map((category) => (
@@ -1699,7 +1761,7 @@ export default function VendorDashboard() {
                               updated[idx] = [path[0] || '', e.target.value];
                               setNewProduct({ ...newProduct, diseasePaths: updated });
                             }}
-                            className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                            className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                           >
                             <option value="">Select Disease Subcategory</option>
                             {(activeDiseaseCategoryMap[path[0]] || []).map((sub) => (
@@ -1725,7 +1787,7 @@ export default function VendorDashboard() {
                       placeholder="Brand"
                       value={newProduct.brand}
                       onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
@@ -1734,7 +1796,7 @@ export default function VendorDashboard() {
                       onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
                       required
                       step="0.01"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
@@ -1743,7 +1805,7 @@ export default function VendorDashboard() {
                       onChange={(e) => setNewProduct({ ...newProduct, usdPrice: e.target.value })}
                       required
                       step="0.01"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
@@ -1751,19 +1813,19 @@ export default function VendorDashboard() {
                       value={newProduct.mrp}
                       onChange={(e) => setNewProduct({ ...newProduct, mrp: e.target.value })}
                       step="0.01"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
                       placeholder="Stock Qty"
                       value={newProduct.stock}
                       onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <select
                       value={newProduct.potency}
                       onChange={(e) => setNewProduct({ ...newProduct, potency: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     >
                       <option value="">Potency (Optional)</option>
                       {POTENCY_OPTIONS.map((potency) => (
@@ -1777,12 +1839,12 @@ export default function VendorDashboard() {
                       placeholder="Quantity (Optional)"
                       value={newProduct.quantity}
                       onChange={(e) => setNewProduct({ ...newProduct, quantity: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <select
                       value={newProduct.quantityUnit}
                       onChange={(e) => setNewProduct({ ...newProduct, quantityUnit: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     >
                       {QUANTITY_UNIT_OPTIONS.map((unit) => (
                         <option key={unit} value={unit}>{unit}</option>
@@ -1793,27 +1855,27 @@ export default function VendorDashboard() {
                       placeholder="Benefit tag (e.g. Immunity)"
                       value={newProduct.benefit}
                       onChange={(e) => setNewProduct({ ...newProduct, benefit: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <textarea
                       placeholder="Description"
                       value={newProduct.description}
                       onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
                       rows={2}
                     />
                     <textarea
                       placeholder="Safety Information (one point per line)"
                       value={newProduct.safetyInformation}
                       onChange={(e) => setNewProduct({ ...newProduct, safetyInformation: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
                       rows={3}
                     />
                     <textarea
                       placeholder="Specifications (one point per line)"
                       value={newProduct.specifications}
                       onChange={(e) => setNewProduct({ ...newProduct, specifications: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
                       rows={3}
                     />
                   </div>
@@ -1928,7 +1990,7 @@ export default function VendorDashboard() {
                       value={editProduct.name}
                       onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
                       required
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <select
                       value={editProduct.productType}
@@ -1943,7 +2005,7 @@ export default function VendorDashboard() {
                           subcategory: '',
                         });
                       }}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     >
                       {productTypeOptions.map((productType) => (
                         <option key={productType} value={productType}>{productType}</option>
@@ -1993,7 +2055,7 @@ export default function VendorDashboard() {
                                   subcategory: newPath[1] || '',
                                 });
                               }}
-                              className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                              className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                             >
                               <option value="">{levelIdx === 0 ? 'Select Category' : `Level ${levelIdx + 1}`}</option>
                               {options.map((opt) => (
@@ -2008,19 +2070,19 @@ export default function VendorDashboard() {
                       <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
                         <div>
                           <label className="text-sm font-semibold text-slate-800">Additional Category Paths (Optional)</label>
-                          <p className="text-xs text-slate-500">Add one or more extra category &gt; subcategory &gt; next category paths without changing the main selector above.</p>
+                          <p className="text-xs text-slate-500">Add one or more extra product type &gt; category &gt; subcategory &gt; next category paths without changing the main selector above.</p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setEditProduct({ ...editProduct, extraCategoryPaths: [...(editProduct.extraCategoryPaths || []), ['', '', '']] })}
+                          onClick={() => setEditProduct({ ...editProduct, extraCategoryPaths: [...(editProduct.extraCategoryPaths || []), ['', '', '', '']] })}
                           className="text-emerald-700 hover:text-emerald-900 text-sm font-medium"
                         >
                           + Add Path
                         </button>
                       </div>
                       {(editProduct.extraCategoryPaths || []).map((path, idx) => (
-                        <div key={`extra-category-edit-${idx}`} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                          {[0, 1, 2].map((levelIdx) => {
+                        <div key={`extra-category-edit-${idx}`} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                          {[0, 1, 2, 3].map((levelIdx) => {
                             const options = getExtraPathOptions(editProduct.productType || 'Generic Medicine', path, levelIdx);
                             return (
                               <select
@@ -2033,11 +2095,11 @@ export default function VendorDashboard() {
                                   updated[idx] = nextPath;
                                   setEditProduct({ ...editProduct, extraCategoryPaths: updated });
                                 }}
-                                className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                                className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                               >
-                                <option value="">{levelIdx === 0 ? 'Extra Category' : levelIdx === 1 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
+                                <option value="">{levelIdx === 0 ? 'Extra Product Type' : levelIdx === 1 ? 'Extra Category' : levelIdx === 2 ? 'Extra Subcategory' : 'Extra Next Category'}</option>
                                 {options.map((opt) => (
-                                  <option key={opt} value={opt}>{opt}</option>
+                                  <option key={opt} value={opt}>{levelIdx === 0 ? formatProductTypeLabel(opt) : opt}</option>
                                 ))}
                               </select>
                             );
@@ -2076,7 +2138,7 @@ export default function VendorDashboard() {
                               updated[idx] = [e.target.value, ''];
                               setEditProduct({ ...editProduct, diseasePaths: updated });
                             }}
-                            className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                            className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                           >
                             <option value="">Select Disease Category</option>
                             {Object.keys(activeDiseaseCategoryMap).map((category) => (
@@ -2090,7 +2152,7 @@ export default function VendorDashboard() {
                               updated[idx] = [path[0] || '', e.target.value];
                               setEditProduct({ ...editProduct, diseasePaths: updated });
                             }}
-                            className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                            className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                           >
                             <option value="">Select Disease Subcategory</option>
                             {(activeDiseaseCategoryMap[path[0]] || []).map((sub) => (
@@ -2116,7 +2178,7 @@ export default function VendorDashboard() {
                       placeholder="Brand"
                       value={editProduct.brand}
                       onChange={(e) => setEditProduct({ ...editProduct, brand: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
@@ -2125,7 +2187,7 @@ export default function VendorDashboard() {
                       onChange={(e) => setEditProduct({ ...editProduct, price: e.target.value })}
                       required
                       step="0.01"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
@@ -2134,7 +2196,7 @@ export default function VendorDashboard() {
                       onChange={(e) => setEditProduct({ ...editProduct, usdPrice: e.target.value })}
                       required
                       step="0.01"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
@@ -2142,19 +2204,19 @@ export default function VendorDashboard() {
                       value={editProduct.mrp}
                       onChange={(e) => setEditProduct({ ...editProduct, mrp: e.target.value })}
                       step="0.01"
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <input
                       type="number"
                       placeholder="Stock Qty"
                       value={editProduct.stock}
                       onChange={(e) => setEditProduct({ ...editProduct, stock: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <select
                       value={editProduct.potency}
                       onChange={(e) => setEditProduct({ ...editProduct, potency: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     >
                       <option value="">Potency (Optional)</option>
                       {POTENCY_OPTIONS.map((potency) => (
@@ -2168,12 +2230,12 @@ export default function VendorDashboard() {
                       placeholder="Quantity (Optional)"
                       value={editProduct.quantity}
                       onChange={(e) => setEditProduct({ ...editProduct, quantity: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <select
                       value={editProduct.quantityUnit}
                       onChange={(e) => setEditProduct({ ...editProduct, quantityUnit: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     >
                       {QUANTITY_UNIT_OPTIONS.map((unit) => (
                         <option key={unit} value={unit}>{unit}</option>
@@ -2184,27 +2246,27 @@ export default function VendorDashboard() {
                       placeholder="Benefit tag (e.g. Immunity)"
                       value={editProduct.benefit}
                       onChange={(e) => setEditProduct({ ...editProduct, benefit: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <textarea
                       placeholder="Description"
                       value={editProduct.description}
                       onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
                       rows={2}
                     />
                     <textarea
                       placeholder="Safety Information (one point per line)"
                       value={editProduct.safetyInformation}
                       onChange={(e) => setEditProduct({ ...editProduct, safetyInformation: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
                       rows={3}
                     />
                     <textarea
                       placeholder="Specifications (one point per line)"
                       value={editProduct.specifications}
                       onChange={(e) => setEditProduct({ ...editProduct, specifications: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
+                      className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
                       rows={3}
                     />
                   </div>
@@ -2530,3 +2592,4 @@ export default function VendorDashboard() {
     </div>
   );
 }
+

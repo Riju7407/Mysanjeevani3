@@ -242,6 +242,12 @@ export default function ProfilePage() {
                   >
                     Edit Profile
                   </Link>
+                  <Link
+                    href="/profile/change-password"
+                    className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition"
+                  >
+                    Change Password
+                  </Link>
                   {user?.role === 'doctor' && (
                     <Link
                       href="/doctor/panel"

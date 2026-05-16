@@ -16,6 +16,8 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -146,7 +148,7 @@ export default function ForgotPasswordPage() {
                   id="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value as 'user' | 'vendor' | 'doctor')}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white text-gray-900 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="user">User</option>
                   <option value="vendor">Vendor</option>
@@ -164,7 +166,7 @@ export default function ForgotPasswordPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Enter your registered mobile number"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
                   required
                 />
               </div>
@@ -194,7 +196,7 @@ export default function ForgotPasswordPage() {
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="Enter 6-digit OTP"
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 tracking-widest outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
+                      className="w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 px-4 py-3 tracking-widest outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
                       required
                     />
                   </div>
@@ -203,30 +205,48 @@ export default function ForgotPasswordPage() {
                     <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
                       New Password
                     </label>
-                    <input
-                      id="new-password"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        id="new-password"
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((prev) => !prev)}
+                        className="absolute inset-y-0 right-3 flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900"
+                      >
+                        {showNewPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
                       Confirm New Password
                     </label>
-                    <input
-                      id="confirm-password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        id="confirm-password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        className="absolute inset-y-0 right-3 flex items-center text-sm font-medium text-emerald-700 hover:text-emerald-900"
+                      >
+                        {showConfirmPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                   </div>
                 </>
               )}

@@ -7,6 +7,63 @@ import { getCountryFromCookieHeader, isIndiaCountry } from '@/lib/countryPrefere
 
 export const dynamic = 'force-dynamic';
 
+async function fetchActiveVendorProducts(query: any, page: number, limit: number) {
+  const pipeline: any[] = [
+    { $match: query },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendor',
+      },
+    },
+    { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+    {
+      $match: {
+        $or: [
+          { vendor: null },
+          { 'vendor.isActive': true },
+        ],
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+    { $project: { vendor: 0 } },
+  ];
+
+  const products = await Product.aggregate(pipeline);
+  return products;
+}
+
+async function countActiveVendorProducts(query: any) {
+  const pipeline: any[] = [
+    { $match: query },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendor',
+      },
+    },
+    { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+    {
+      $match: {
+        $or: [
+          { vendor: null },
+          { 'vendor.isActive': true },
+        ],
+      },
+    },
+    { $count: 'total' },
+  ];
+
+  const result = await Product.aggregate(pipeline);
+  return result[0]?.total || 0;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -72,12 +129,8 @@ export async function GET(request: NextRequest) {
       query.healthConcerns = { $in: [healthConcern] };
     }
 
-    const products = await Product.find(query)
-      .limit(limit)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
-
-    const total = await Product.countDocuments(query);
+    const products = await fetchActiveVendorProducts(query, page, limit);
+    const total = await countActiveVendorProducts(query);
 
     // Get user location for currency conversion
     const ip = request.headers.get('x-forwarded-for') ||
@@ -90,7 +143,7 @@ export async function GET(request: NextRequest) {
     // Convert prices for all products
     const productsWithConvertedPrices = await Promise.all(
       products.map(async (product) => {
-        const productObj = product.toObject();
+        const productObj = typeof product.toObject === 'function' ? product.toObject() : product;
         const inIndia = userLocation.isIndia || isIndiaCountry(preferredCountry);
         const usdPrice = typeof productObj.usdPrice === 'number' ? productObj.usdPrice : undefined;
         const conversion = inIndia
@@ -175,6 +228,7 @@ export async function POST(request: NextRequest) {
       benefit,
       isActive,
       isPopular,
+      popularSections,
       popularSection,
       productType,
       potency,
@@ -187,21 +241,26 @@ export async function POST(request: NextRequest) {
       typeof quantityUnit === 'string' ? (quantityUnit.trim() || 'None') : (quantityUnit || 'None');
     const normalizedProductType =
       typeof productType === 'string' ? (productType.trim() || undefined) : productType;
-    const normalizedPopularSection =
-      typeof popularSection === 'string' && ['None', 'Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(popularSection)
-        ? popularSection
-        : body.isPopularGeneric
-          ? 'Generic'
-          : body.isPopularAyurveda
-            ? 'Ayurveda'
-            : body.isPopularHomeopathy
-              ? 'Homeopathy'
-              : body.isPopularLabTests
-                ? 'LabTests'
-                : body.isPopular
-                  ? 'Generic'
-                  : 'None';
-    const isPopularSectionSelected = normalizedPopularSection !== 'None';
+    
+    // Handle new popularSections array (or fallback to legacy popularSection)
+    const normalizedPopularSections =
+      Array.isArray(popularSections) && popularSections.length > 0
+        ? popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s))
+        : (typeof popularSection === 'string' && ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(popularSection)
+          ? [popularSection]
+          : body.isPopularGeneric
+            ? ['Generic']
+            : body.isPopularAyurveda
+              ? ['Ayurveda']
+              : body.isPopularHomeopathy
+                ? ['Homeopathy']
+                : body.isPopularLabTests
+                  ? ['LabTests']
+                  : body.isPopular
+                    ? ['Generic']
+                    : []);
+    
+    const isPopularSectionSelected = normalizedPopularSections.length > 0;
 
     if (!name || !price || !category || usdPrice === undefined || usdPrice === null || isNaN(Number(usdPrice))) {
       return NextResponse.json(
@@ -232,12 +291,13 @@ export async function POST(request: NextRequest) {
       mrp,
       benefit,
       isActive: isActive !== undefined ? isActive : true,
-      popularSection: normalizedPopularSection,
+      popularSections: normalizedPopularSections,
+      popularSection: normalizedPopularSections.length > 0 ? normalizedPopularSections[0] : 'None',
       isPopular: isPopular !== undefined ? isPopular : isPopularSectionSelected,
-      isPopularGeneric: normalizedPopularSection === 'Generic',
-      isPopularAyurveda: normalizedPopularSection === 'Ayurveda',
-      isPopularHomeopathy: normalizedPopularSection === 'Homeopathy',
-      isPopularLabTests: normalizedPopularSection === 'LabTests',
+      isPopularGeneric: normalizedPopularSections.includes('Generic'),
+      isPopularAyurveda: normalizedPopularSections.includes('Ayurveda'),
+      isPopularHomeopathy: normalizedPopularSections.includes('Homeopathy'),
+      isPopularLabTests: normalizedPopularSections.includes('LabTests'),
       productType: normalizedProductType || 'Generic Medicine',
       potency: normalizedPotency,
       quantity,

@@ -60,20 +60,23 @@ export async function POST(request: NextRequest) {
       typeof body.approvalStatus === 'string'
         ? (body.approvalStatus.trim().toLowerCase() || undefined)
         : body.approvalStatus;
-    const normalizedPopularSection =
-      typeof body.popularSection === 'string' && ['None', 'Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(body.popularSection)
-        ? body.popularSection
-        : body.isPopularGeneric
-          ? 'Generic'
-          : body.isPopularAyurveda
-            ? 'Ayurveda'
-            : body.isPopularHomeopathy
-              ? 'Homeopathy'
-              : body.isPopularLabTests
-                ? 'LabTests'
-                : body.isPopular
-                  ? 'Generic'
-                  : 'None';
+    const normalizedPopularSections =
+      Array.isArray(body.popularSections) && body.popularSections.length > 0
+        ? body.popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s))
+        : (typeof body.popularSection === 'string' && ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(body.popularSection)
+          ? [body.popularSection]
+          : body.isPopularGeneric
+            ? ['Generic']
+            : body.isPopularAyurveda
+              ? ['Ayurveda']
+              : body.isPopularHomeopathy
+                ? ['Homeopathy']
+                : body.isPopularLabTests
+                  ? ['LabTests']
+                  : body.isPopular
+                    ? ['Generic']
+                    : []);
+    const normalizedPopularSection = normalizedPopularSections.length > 0 ? normalizedPopularSections[0] : 'None';
     
     if (!body.name || !body.category || body.price === undefined || body.usdPrice === undefined || body.usdPrice === null || isNaN(Number(body.usdPrice))) {
       return NextResponse.json(
@@ -93,12 +96,13 @@ export async function POST(request: NextRequest) {
       quantityUnit: normalizedQuantityUnit,
       productType: normalizedProductType,
       approvalStatus: normalizedApprovalStatus || body.approvalStatus || 'approved',
+      popularSections: normalizedPopularSections,
       popularSection: normalizedPopularSection,
-      isPopular: body.isPopular !== undefined ? body.isPopular : normalizedPopularSection !== 'None',
-      isPopularGeneric: normalizedPopularSection === 'Generic',
-      isPopularAyurveda: normalizedPopularSection === 'Ayurveda',
-      isPopularHomeopathy: normalizedPopularSection === 'Homeopathy',
-      isPopularLabTests: normalizedPopularSection === 'LabTests',
+      isPopular: body.isPopular !== undefined ? body.isPopular : normalizedPopularSections.length > 0,
+      isPopularGeneric: normalizedPopularSections.includes('Generic'),
+      isPopularAyurveda: normalizedPopularSections.includes('Ayurveda'),
+      isPopularHomeopathy: normalizedPopularSections.includes('Homeopathy'),
+      isPopularLabTests: normalizedPopularSections.includes('LabTests'),
       safetyInformation: body.safetyInformation || undefined,
       specifications: body.specifications || undefined,
       isActive: body.isActive !== undefined ? body.isActive : true,
@@ -143,8 +147,22 @@ export async function PUT(request: NextRequest) {
       typeof update.popularSection === 'string' && ['None', 'Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(update.popularSection)
         ? update.popularSection
         : undefined;
-    if (normalizedPopularSection !== undefined) {
+    
+    // Handle new popularSections array (or fallback to legacy popularSection)
+    if (Array.isArray(update.popularSections) && update.popularSections.length > 0) {
+      const filtered = update.popularSections.filter((s) => ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(s));
+      if (filtered.length > 0) {
+        update.popularSections = filtered;
+        update.popularSection = filtered[0];
+        update.isPopular = true;
+        update.isPopularGeneric = filtered.includes('Generic');
+        update.isPopularAyurveda = filtered.includes('Ayurveda');
+        update.isPopularHomeopathy = filtered.includes('Homeopathy');
+        update.isPopularLabTests = filtered.includes('LabTests');
+      }
+    } else if (normalizedPopularSection !== undefined) {
       update.popularSection = normalizedPopularSection;
+      update.popularSections = normalizedPopularSection !== 'None' ? [normalizedPopularSection] : [];
       update.isPopular = normalizedPopularSection !== 'None';
       update.isPopularGeneric = normalizedPopularSection === 'Generic';
       update.isPopularAyurveda = normalizedPopularSection === 'Ayurveda';

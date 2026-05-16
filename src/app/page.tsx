@@ -36,6 +36,7 @@ interface Product {
   isPopularHomeopathy?: boolean;
   isPopularLabTests?: boolean;
   popularSection?: 'None' | 'Generic' | 'Ayurveda' | 'Homeopathy' | 'LabTests';
+  popularSections?: string[];
 }
 
 interface ReviewSummary {
@@ -381,16 +382,16 @@ export default function HomePage() {
 
   // Popular sections are driven by the selected popularSection value.
   const genericMedicines = allProducts.filter(
-    (p) => (p.popularSection === 'Generic') || Boolean((p as any).isPopularGeneric || p.isPopular)
+    (p) => p.popularSections?.includes('Generic') || (p.popularSection === 'Generic') || Boolean((p as any).isPopularGeneric || p.isPopular)
   );
   const ayurveda = allProducts.filter(
-    (p) => (p.popularSection === 'Ayurveda') || Boolean((p as any).isPopularAyurveda)
+    (p) => p.popularSections?.includes('Ayurveda') || (p.popularSection === 'Ayurveda') || Boolean((p as any).isPopularAyurveda)
   );
   const homeopathy = allProducts.filter(
-    (p) => (p.popularSection === 'Homeopathy') || Boolean((p as any).isPopularHomeopathy)
+    (p) => p.popularSections?.includes('Homeopathy') || (p.popularSection === 'Homeopathy') || Boolean((p as any).isPopularHomeopathy)
   );
   const labTests = allProducts.filter(
-    (p) => (p.popularSection === 'LabTests') || Boolean((p as any).isPopularLabTests)
+    (p) => p.popularSections?.includes('LabTests') || (p.popularSection === 'LabTests') || Boolean((p as any).isPopularLabTests)
   );
 
   return (

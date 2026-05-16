@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     const role = normalizeRole(String(body?.role || 'user')) as PhoneLoginRole;
 
     const normalizedPhone = normalizePhone(rawPhone);
+    const allowUnregistered = Boolean(body?.allowUnregistered);
 
     if (normalizedPhone.length < 10 || otp.length !== 6) {
       return NextResponse.json(
@@ -64,32 +65,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const lookup = await findRegisteredByPhone(rawPhone, role);
-    if (!lookup) {
-      return NextResponse.json({ error: 'Number Not registered' }, { status: 404 });
-    }
+    let lookup = null;
+    if (!allowUnregistered || role !== 'user') {
+      lookup = await findRegisteredByPhone(rawPhone, role);
+      if (!lookup) {
+        return NextResponse.json({ error: 'Number Not registered' }, { status: 404 });
+      }
 
-    if (role === 'vendor') {
-      if (lookup.account.status === 'rejected') {
+      if (role === 'vendor') {
+        if (lookup.account.status === 'rejected') {
+          return NextResponse.json(
+            { error: 'Your vendor account was rejected. Contact support.' },
+            { status: 403 }
+          );
+        }
+
+        if (lookup.account.status === 'suspended') {
+          return NextResponse.json({ error: 'Your vendor account is suspended' }, { status: 403 });
+        }
+      }
+
+      if (role === 'doctor' && !lookup.account.isApproved) {
         return NextResponse.json(
-          { error: 'Your vendor account was rejected. Contact support.' },
+          {
+            error: 'Your doctor account is pending admin approval. Please wait for approval before logging in.',
+            pendingApproval: true,
+          },
           { status: 403 }
         );
       }
-
-      if (lookup.account.status === 'suspended') {
-        return NextResponse.json({ error: 'Your vendor account is suspended' }, { status: 403 });
-      }
-    }
-
-    if (role === 'doctor' && !lookup.account.isApproved) {
-      return NextResponse.json(
-        {
-          error: 'Your doctor account is pending admin approval. Please wait for approval before logging in.',
-          pendingApproval: true,
-        },
-        { status: 403 }
-      );
     }
 
     const otpHash = hashOtp(normalizedPhone, otp);
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     const token = crypto.randomUUID();
 
-    if (lookup.role === 'vendor') {
+    if (lookup?.role === 'vendor') {
       return NextResponse.json(
         {
           message: 'Login successful',
@@ -130,18 +134,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (lookup) {
+      return NextResponse.json(
+        {
+          message: 'Login successful',
+          user: {
+            id: lookup.account._id,
+            email: lookup.account.email,
+            fullName: lookup.account.fullName,
+            phone: lookup.account.phone || '',
+            role: lookup.account.role,
+            isVerified: lookup.account.isVerified,
+          },
+          token,
+        },
+        { status: 200 }
+      );
+    }
+
     return NextResponse.json(
       {
-        message: 'Login successful',
-        user: {
-          id: lookup.account._id,
-          email: lookup.account.email,
-          fullName: lookup.account.fullName,
-          phone: lookup.account.phone || '',
-          role: lookup.account.role,
-          isVerified: lookup.account.isVerified,
-        },
-        token,
+        message: 'OTP verified successfully',
+        phone: normalizedPhone,
       },
       { status: 200 }
     );

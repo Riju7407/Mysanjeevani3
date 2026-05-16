@@ -27,10 +27,10 @@ type DynamicCategoryConfig = {
   diseaseSubcategoryMap?: Record<string, string[]>;
 };
 
-const CATEGORY_TREE_NAME_MAPPING: Record<string, string> = {
-  Medicines: 'Generic Medicine',
-  Ayurveda: 'Ayurveda Medicine',
-  Disease: 'Disease Categories',
+const CATEGORY_TREE_ROOT_ALIASES: Record<string, string[]> = {
+  Medicines: ['Generic Medicine'],
+  Ayurveda: ['Ayurveda Medicine'],
+  Disease: ['Disease Categories', 'Disease'],
 };
 
 const normalizeName = (value: string) => String(value || '').trim().toLowerCase();
@@ -53,8 +53,8 @@ const findTreeNodeByName = (
   return null;
 };
 
-const getCategoryTreeRootName = (categoryName: string) => {
-  return CATEGORY_TREE_NAME_MAPPING[categoryName] || categoryName;
+const getCategoryTreeRootNames = (categoryName: string) => {
+  return CATEGORY_TREE_ROOT_ALIASES[categoryName] || [categoryName];
 };
 
 const getTreeNodeForCategory = (
@@ -62,7 +62,12 @@ const getTreeNodeForCategory = (
   categoryName: string
 ): CategoryTreeNode | null => {
   if (!tree) return null;
-  return findTreeNodeByName(tree, getCategoryTreeRootName(categoryName));
+  const rootNames = getCategoryTreeRootNames(categoryName);
+  for (const rootName of rootNames) {
+    const node = findTreeNodeByName(tree, rootName);
+    if (node) return node;
+  }
+  return null;
 };
 
 const getCategoryBasePath = (categoryName: string) => {

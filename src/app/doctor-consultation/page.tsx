@@ -241,6 +241,13 @@ export default function DoctorConsultationPage() {
     setSelectedCountry(storedCountry);
   }, []);
 
+  // Auto-clear transient error messages after a short duration
+  useEffect(() => {
+    if (!error) return;
+    const id = setTimeout(() => setError(''), 6000);
+    return () => clearTimeout(id);
+  }, [error]);
+
   const openBooking = (doctor: Doctor) => {
     // Check if emergency alert is acknowledged
     if (!emergencyAcknowledged || !termsAccepted) {
@@ -501,7 +508,7 @@ export default function DoctorConsultationPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && fetchDoctors()}
-                  className="w-full border-2 border-emerald-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition text-sm"
+                  className="w-full border-2 border-emerald-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition text-sm placeholder:text-slate-500 text-slate-900"
                 />
               </div>
             </div>
@@ -520,6 +527,14 @@ export default function DoctorConsultationPage() {
             </select>
           </div>
         </div>
+        {/* Global inline error banner (shows when action blocked by missing consents) */}
+        {error && !showBookingModal && (
+          <div className="max-w-7xl mx-auto px-4 py-2">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          </div>
+        )}
 
         {/* Horizontal Category Scroll */}
         <div className="max-w-7xl mx-auto px-4 pb-4">
@@ -1002,7 +1017,7 @@ export default function DoctorConsultationPage() {
                       type="text"
                       value={form.patientName}
                       onChange={(e) => setForm({ ...form, patientName: e.target.value })}
-                      className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                      className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                       placeholder="Enter full name"
                     />
                   </div>
@@ -1013,7 +1028,7 @@ export default function DoctorConsultationPage() {
                       type="tel"
                       value={form.patientPhone}
                       onChange={(e) => setForm({ ...form, patientPhone: e.target.value })}
-                      className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                      className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                       placeholder="10-digit mobile number"
                     />
                   </div>
@@ -1024,7 +1039,7 @@ export default function DoctorConsultationPage() {
                       type="email"
                       value={form.patientEmail}
                       onChange={(e) => setForm({ ...form, patientEmail: e.target.value })}
-                      className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                      className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                       placeholder="name@example.com"
                     />
                   </div>
@@ -1035,7 +1050,7 @@ export default function DoctorConsultationPage() {
                       <select
                         value={form.appointmentDate}
                         onChange={(e) => setForm({ ...form, appointmentDate: e.target.value })}
-                        className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                        className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                       >
                         <option value="">Select available date</option>
                         {getValidAvailableDates(bookingDoctor.availableDates).map((date) => (
@@ -1050,7 +1065,7 @@ export default function DoctorConsultationPage() {
                         min={todayStr}
                         value={form.appointmentDate}
                         onChange={(e) => setForm({ ...form, appointmentDate: e.target.value })}
-                        className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                        className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                       />
                     )}
                     <p className="text-xs text-slate-500 mt-1">
@@ -1065,7 +1080,7 @@ export default function DoctorConsultationPage() {
                     <select
                       value={form.consultationType}
                       onChange={(e) => setForm({ ...form, consultationType: e.target.value })}
-                      className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                      className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
                     >
                       <option value="in-person">In-Person Visit</option>
                       <option value="video">Video Call</option>
@@ -1080,7 +1095,7 @@ export default function DoctorConsultationPage() {
                     rows={4}
                     value={form.symptoms}
                     onChange={(e) => setForm({ ...form, symptoms: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 resize-none"
+                    className="w-full rounded-xl border border-slate-300 bg-white text-gray-900 placeholder:text-gray-500 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 resize-none"
                     placeholder="Describe symptoms, concerns, or reason for consultation"
                   />
                 </div>

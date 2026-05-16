@@ -164,7 +164,14 @@ const productSchema = new mongoose.Schema(
       },
     },
     
-    // Featured/Popular Display Section (single selection)
+    // Featured/Popular Display Sections (multiple selections)
+    popularSections: {
+      type: [String],
+      enum: ['Generic', 'Ayurveda', 'Homeopathy', 'LabTests'],
+      default: [],
+    },
+    
+    // Legacy field for backward compatibility (will be migrated to popularSections)
     popularSection: {
       type: String,
       enum: ['None', 'Generic', 'Ayurveda', 'Homeopathy', 'LabTests'],

@@ -744,7 +744,7 @@ export default function CartPage() {
                             >
                               −
                             </button>
-                            <span className="w-8 text-center font-semibold">
+                            <span className="w-8 text-center font-semibold text-gray-900">
                               {item.quantity}
                             </span>
                             <button

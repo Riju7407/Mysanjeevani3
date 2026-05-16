@@ -37,7 +37,7 @@ export function OTPVerificationModal({
       const response = await fetch('/api/auth/phone/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify({ phone: cleanPhone, allowUnregistered: true }),
       });
 
       const data = await response.json();
@@ -74,7 +74,7 @@ export function OTPVerificationModal({
       const response = await fetch('/api/auth/phone/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone, otp }),
+        body: JSON.stringify({ phone: cleanPhone, otp, allowUnregistered: true }),
       });
 
       const data = await response.json();
@@ -137,7 +137,7 @@ export function OTPVerificationModal({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Enter 10-digit phone number"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 disabled={isLoading}
                 maxLength={15}
               />
@@ -185,7 +185,7 @@ export function OTPVerificationModal({
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
-                className="w-full px-4 py-3 text-center text-lg font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-3 text-center text-lg font-mono border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 maxLength={6}
                 disabled={isLoading}
                 autoFocus

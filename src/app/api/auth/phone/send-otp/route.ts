@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const rawPhone = String(body?.phone || '').trim();
     const role = normalizeRole(String(body?.role || 'user')) as PhoneLoginRole;
+    const allowUnregistered = Boolean(body?.allowUnregistered);
 
     const normalizedPhone = normalizePhone(rawPhone);
 
@@ -72,32 +73,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const lookup = await findRegisteredByPhone(rawPhone, role);
-    if (!lookup) {
-      return NextResponse.json({ error: 'Number Not registered' }, { status: 404 });
-    }
+    let lookup = null;
+    if (!allowUnregistered || role !== 'user') {
+      lookup = await findRegisteredByPhone(rawPhone, role);
+      if (!lookup) {
+        return NextResponse.json({ error: 'Number Not registered' }, { status: 404 });
+      }
 
-    if (role === 'vendor') {
-      if (lookup.account.status === 'rejected') {
+      if (role === 'vendor') {
+        if (lookup.account.status === 'rejected') {
+          return NextResponse.json(
+            { error: 'Your vendor account was rejected. Contact support.' },
+            { status: 403 }
+          );
+        }
+
+        if (lookup.account.status === 'suspended') {
+          return NextResponse.json({ error: 'Your vendor account is suspended' }, { status: 403 });
+        }
+      }
+
+      if (role === 'doctor' && !lookup.account.isApproved) {
         return NextResponse.json(
-          { error: 'Your vendor account was rejected. Contact support.' },
+          {
+            error: 'Your doctor account is pending admin approval. Please wait for approval before logging in.',
+            pendingApproval: true,
+          },
           { status: 403 }
         );
       }
-
-      if (lookup.account.status === 'suspended') {
-        return NextResponse.json({ error: 'Your vendor account is suspended' }, { status: 403 });
-      }
-    }
-
-    if (role === 'doctor' && !lookup.account.isApproved) {
-      return NextResponse.json(
-        {
-          error: 'Your doctor account is pending admin approval. Please wait for approval before logging in.',
-          pendingApproval: true,
-        },
-        { status: 403 }
-      );
     }
 
     const lastOtp = await PhoneOtp.findOne({ phone: normalizedPhone, role }).sort({ createdAt: -1 });

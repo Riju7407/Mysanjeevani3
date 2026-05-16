@@ -131,16 +131,15 @@ async function run() {
     details: verifySuccess,
   });
 
-  // 2) not registered
+  // 2) unregistered user number should still be allowed for OTP
   const notRegistered = await apiRequest('/api/auth/phone/send-otp', 'POST', {
     phone: randomPhone(),
     role: 'user',
+    allowUnregistered: true,
   });
   results.push({
-    name: 'send-otp number not registered',
-    passed:
-      notRegistered.status === 404 &&
-      String(notRegistered.data.error || '').toLowerCase() === 'number not registered'.toLowerCase(),
+    name: 'send-otp guest phone allows unregistered number',
+    passed: notRegistered.status === 200,
     details: notRegistered,
   });
 

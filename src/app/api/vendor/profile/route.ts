@@ -45,6 +45,7 @@ export async function PUT(request: NextRequest) {
       businessType,
       description,
       logo,
+      isActive,
       street,
       city,
       state,
@@ -66,6 +67,7 @@ export async function PUT(request: NextRequest) {
     if (businessType !== undefined) updates.businessType = businessType;
     if (description !== undefined) updates.description = description;
     if (logo !== undefined) updates.logo = logo || '';
+    if (isActive !== undefined) updates.isActive = Boolean(isActive);
 
     const addressUpdates: Record<string, unknown> = {};
     if (street !== undefined) addressUpdates.street = street;
