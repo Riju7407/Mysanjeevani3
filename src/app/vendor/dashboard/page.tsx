@@ -906,6 +906,7 @@ export default function VendorDashboard() {
         isPopularHomeopathy: false,
         isPopularLabTests: false,
         popularSection: 'None',
+        popularSections: [],
         stock: '',
         image: '',
       });
