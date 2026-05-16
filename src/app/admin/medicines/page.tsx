@@ -1039,6 +1039,23 @@ export default function AdminMedicines() {
                     <button onClick={() => { setBulkFile(null); setShowBulkUpload(false); setBulkResult(null); }} className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50">Cancel</button>
                   </div>
                 </div>
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-slate-900 mb-2">Bulk Upload Excel/CSV format</p>
+                  <p>The first row should contain headers. Supported columns include:</p>
+                  <ul className="list-disc ml-5 mt-2 space-y-1">
+                    <li><strong>Name</strong> (or <em>Product Name</em> / <em>Product</em>)</li>
+                    <li><strong>Brand</strong> (or <em>Manufacturer</em>)</li>
+                    <li><strong>Category</strong> (or <em>Cat</em>)</li>
+                    <li><strong>Price</strong>, <strong>USD Price</strong> (or <em>USD</em> / <em>Dollar Price</em>)</li>
+                    <li><strong>MRP</strong> (or <em>Maximum Retail Price</em>)</li>
+                    <li><strong>Stock</strong> (or <em>Quantity</em>)</li>
+                    <li><strong>Description</strong> (or <em>Desc</em>)</li>
+                    <li><strong>Images</strong> (comma / semicolon / newline separated URLs)</li>
+                    <li><strong>ProductType</strong> (or <em>Type</em>)</li>
+                    <li><strong>RequiresPrescription</strong> (or <em>Rx</em> / <em>Prescription</em>)</li>
+                  </ul>
+                  <p className="mt-2 text-xs text-slate-500">Required fields: <strong>Name</strong>, <strong>Category</strong>, <strong>Price</strong>, and <strong>USD Price</strong>.</p>
+                </div>
                 {bulkResult && (
                   <div className="mt-3 text-sm text-slate-700">
                     <div>Created: {bulkResult.created ?? 0}</div>
