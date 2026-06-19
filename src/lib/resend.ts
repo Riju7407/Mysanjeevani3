@@ -1,12 +1,18 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface EmailOtpOptions {
   to: string;
   otp: string;
   type: 'reset' | 'verify';
   userName?: string;
+}
+
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY environment variable is not set');
+  }
+  return new Resend(apiKey);
 }
 
 export async function sendOtpViaResend({
@@ -20,6 +26,7 @@ export async function sendOtpViaResend({
       throw new Error('RESEND_API_KEY environment variable is not set');
     }
 
+    const resend = getResendClient();
     const subject = type === 'reset' ? 'Password Reset OTP' : 'Email Verification OTP';
     const emailTemplate = generateOtpEmailTemplate(otp, userName, type);
 
