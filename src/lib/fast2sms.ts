@@ -39,8 +39,6 @@ export async function sendOtpViaWhatsApp(
  * Note: Pandeyra API might not support balance retrieval. Returns mock value.
  */
 export async function getFast2SmsBalance(): Promise<number> {
-  const { username, apiKey } = getPandeyraCredentials();
-
   try {
     // Pandeyra doesn't have a dedicated balance API like Fast2SMS
     // Return a mock value indicating the service is available

@@ -74,8 +74,6 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-      );
-    }
 
     const lookup = await findRegisteredByPhone(rawPhone, role);
     if (!lookup) {
