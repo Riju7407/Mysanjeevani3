@@ -10,6 +10,8 @@ import {
 } from '@/lib/phoneAuthUtils';
 import { consumeRateLimit, getClientIp } from '@/lib/rateLimit';
 
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
 function hashOtp(phone: string, otp: string): string {
   return crypto
     .createHash('sha256')
@@ -49,31 +51,34 @@ export async function POST(request: NextRequest) {
 
     const clientIp = getClientIp(request);
 
-    const ipLimit = await consumeRateLimit('forgot-password-reset-ip', clientIp, 40, 15 * 60 * 1000);
-    if (!ipLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: `Too many password reset attempts from this IP. Try again in ${ipLimit.retryAfterSeconds}s.`,
-          retryAfterSeconds: ipLimit.retryAfterSeconds,
-        },
-        { status: 429 }
-      );
-    }
+    // Rate limiting (relaxed in development to avoid local testing lockouts)
+    if (!IS_DEV) {
+      const ipLimit = await consumeRateLimit('forgot-password-reset-ip', clientIp, 40, 15 * 60 * 1000);
+      if (!ipLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: `Too many password reset attempts from this IP. Try again in ${ipLimit.retryAfterSeconds}s.`,
+            retryAfterSeconds: ipLimit.retryAfterSeconds,
+          },
+          { status: 429 }
+        );
+      }
 
-    const phoneLimit = await consumeRateLimit(
-      'forgot-password-reset-phone',
-      `${role}:${normalizedPhone}`,
-      10,
-      10 * 60 * 1000
-    );
-    if (!phoneLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: `Too many attempts for this number. Try again in ${phoneLimit.retryAfterSeconds}s.`,
-          retryAfterSeconds: phoneLimit.retryAfterSeconds,
-        },
-        { status: 429 }
+      const phoneLimit = await consumeRateLimit(
+        'forgot-password-reset-phone',
+        `${role}:${normalizedPhone}`,
+        10,
+        10 * 60 * 1000
       );
+      if (!phoneLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: `Too many attempts for this number. Try again in ${phoneLimit.retryAfterSeconds}s.`,
+            retryAfterSeconds: phoneLimit.retryAfterSeconds,
+          },
+          { status: 429 }
+        );
+      }
     }
 
     const lookup = await findRegisteredByPhone(rawPhone, role);

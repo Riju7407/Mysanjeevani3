@@ -49,12 +49,18 @@ export async function detectUserCountry(ip?: string, acceptLanguage?: string, pr
     // If IP is provided and not reserved, try geolocation
     if (ip && !isReservedIP(ip)) {
       try {
-        // Use ipapi.co for IP geolocation
+        // Use ipapi.co for IP geolocation with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
         const response = await fetch(`http://ipapi.co/${ip}/json/`, {
           headers: {
             'User-Agent': 'MySanjeevani/1.0'
-          }
+          },
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
@@ -69,6 +75,7 @@ export async function detectUserCountry(ip?: string, acceptLanguage?: string, pr
         }
       } catch (geoError) {
         // Geolocation failed, continue to fallback
+        console.warn('[currencyUtils] Geolocation error:', geoError instanceof Error ? geoError.message : 'Unknown error');
       }
     }
 
@@ -101,12 +108,18 @@ export async function getExchangeRate(): Promise<number> {
       return cached;
     }
 
-    // Use exchangerate-api.com for free exchange rates
+    // Use exchangerate-api.com for free exchange rates with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
     const response = await fetch('https://api.exchangerate-api.com/v4/latest/INR', {
       headers: {
         'User-Agent': 'MySanjeevani/1.0'
-      }
+      },
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error('Failed to fetch exchange rate');
@@ -124,7 +137,7 @@ export async function getExchangeRate(): Promise<number> {
 
     return rate;
   } catch (error) {
-    console.error('Error fetching exchange rate:', error);
+    console.error('Error fetching exchange rate:', error instanceof Error ? error.message : 'Unknown error');
     // Fallback rate (approximate current rate)
     return 0.012;
   }

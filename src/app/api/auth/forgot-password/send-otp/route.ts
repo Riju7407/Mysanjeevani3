@@ -11,6 +11,7 @@ import {
 import { sendOtpViaFast2Sms } from '@/lib/fast2sms';
 import { consumeRateLimit, getClientIp } from '@/lib/rateLimit';
 
+const IS_DEV = process.env.NODE_ENV !== 'production';
 const OTP_TTL_MS = Math.max(10, Number(process.env.OTP_TTL_SECONDS || '300')) * 1000;
 const RESEND_COOLDOWN_SECONDS = Math.max(30, Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || '60'));
 
@@ -44,30 +45,35 @@ export async function POST(request: NextRequest) {
 
     const clientIp = getClientIp(request);
 
-    const ipLimit = await consumeRateLimit('forgot-password-send-otp-ip', clientIp, 20, 15 * 60 * 1000);
-    if (!ipLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: `Too many OTP requests from this IP. Try again in ${ipLimit.retryAfterSeconds}s.`,
-          retryAfterSeconds: ipLimit.retryAfterSeconds,
-        },
-        { status: 429 }
-      );
-    }
+    // Rate limiting (relaxed in development to avoid local testing lockouts)
+    if (!IS_DEV) {
+      const ipLimit = await consumeRateLimit('forgot-password-send-otp-ip', clientIp, 20, 15 * 60 * 1000);
+      if (!ipLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: `Too many OTP requests from this IP. Try again in ${ipLimit.retryAfterSeconds}s.`,
+            retryAfterSeconds: ipLimit.retryAfterSeconds,
+          },
+          { status: 429 }
+        );
+      }
 
-    const phoneLimit = await consumeRateLimit(
-      'forgot-password-send-otp-phone',
-      `${role}:${normalizedPhone}`,
-      5,
-      15 * 60 * 1000
-    );
-    if (!phoneLimit.allowed) {
-      return NextResponse.json(
-        {
-          error: `Too many OTP requests for this number. Try again in ${phoneLimit.retryAfterSeconds}s.`,
-          retryAfterSeconds: phoneLimit.retryAfterSeconds,
-        },
-        { status: 429 }
+      const phoneLimit = await consumeRateLimit(
+        'forgot-password-send-otp-phone',
+        `${role}:${normalizedPhone}`,
+        5,
+        15 * 60 * 1000
+      );
+      if (!phoneLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: `Too many OTP requests for this number. Try again in ${phoneLimit.retryAfterSeconds}s.`,
+            retryAfterSeconds: phoneLimit.retryAfterSeconds,
+          },
+          { status: 429 }
+        );
+      }
+    }
       );
     }
 

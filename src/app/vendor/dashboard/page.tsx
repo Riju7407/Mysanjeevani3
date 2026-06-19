@@ -3,7 +3,9 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 import { useImageUpload } from '@/lib/hooks/useImageUpload';
+import RichTextEditor from '@/components/RichTextEditor';
 
 interface VendorInfo {
   _id: string;
@@ -45,6 +47,7 @@ interface Product {
   extraCategoryPaths?: string[][];
   benefit?: string;
   requiresPrescription?: boolean;
+  shortDescription?: string;
   description?: string;
   safetyInformation?: string;
   specifications?: string;
@@ -323,6 +326,7 @@ export default function VendorDashboard() {
     name: '',
     brand: '',
     description: '',
+    shortDescription: '',
     safetyInformation: '',
     specifications: '',
     price: '',
@@ -358,6 +362,7 @@ export default function VendorDashboard() {
     name: '',
     brand: '',
     description: '',
+    shortDescription: '',
     safetyInformation: '',
     specifications: '',
     price: '',
@@ -397,6 +402,10 @@ export default function VendorDashboard() {
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [categoryConfig, setCategoryConfig] = useState<DynamicCategoryConfig | null>(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkResult, setBulkResult] = useState<any>(null);
   const { uploadImage, uploading: imageUploading, error: uploadError, previewUrl } = useImageUpload();
 
   const activeVendorCategoryMap: Record<string, string[]> =
@@ -880,6 +889,7 @@ export default function VendorDashboard() {
         name: '',
         brand: '',
         description: '',
+        shortDescription: '',
         safetyInformation: '',
         specifications: '',
         price: '',
@@ -945,6 +955,7 @@ export default function VendorDashboard() {
       name: product.name || '',
       brand: product.brand || '',
       description: product.description || '',
+      shortDescription: product.shortDescription || '',
       safetyInformation: product.safetyInformation || '',
       specifications: product.specifications || '',
       price: String(product.price ?? ''),
@@ -1035,6 +1046,7 @@ export default function VendorDashboard() {
           vendorId: vendorInfo._id,
           name: editProduct.name,
           description: editProduct.description,
+          shortDescription: editProduct.shortDescription,
           price: parseFloat(editProduct.price),
           usdPrice: editProduct.usdPrice ? parseFloat(editProduct.usdPrice) : undefined,
           mrp: editProduct.mrp ? parseFloat(editProduct.mrp) : undefined,
@@ -1109,6 +1121,93 @@ export default function VendorDashboard() {
     } catch (err: unknown) {
       const error = err instanceof Error ? err.message : 'Unknown error';
       alert('Error: ' + error);
+    }
+  };
+
+  const exportProductsToExcel = () => {
+    const rows = products.map((product) => ({
+      'Product ID': product._id,
+      Name: product.name,
+      Brand: product.brand,
+      Category: product.category,
+      Subcategory: product.subcategory || '',
+      'Product Type': product.productType || '',
+      Price: product.price,
+      'USD Price': product.usdPrice ?? '',
+      MRP: product.mrp ?? '',
+      Stock: product.stock,
+      'Requires Prescription': product.requiresPrescription ? 'Yes' : 'No',
+      'Approval Status': product.approvalStatus || '',
+      Description: product.description || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+    const workbookBlob = new Blob([XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })], {
+      type: 'application/octet-stream',
+    });
+    const url = URL.createObjectURL(workbookBlob);
+    const element = document.createElement('a');
+    element.href = url;
+    element.download = `products-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) {
+      alert('Please select a file');
+      return;
+    }
+
+    if (!vendorInfo?._id) {
+      alert('Vendor information missing');
+      return;
+    }
+
+    setBulkUploading(true);
+    try {
+      const workbook = XLSX.read(await bulkFile.arrayBuffer(), { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      if (!Array.isArray(data) || data.length === 0) {
+        alert('No valid product data found in file');
+        setBulkUploading(false);
+        return;
+      }
+
+      const token = localStorage.getItem('vendorToken');
+      const response = await fetch('/api/vendor/products/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          vendorId: vendorInfo._id,
+          products: data,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Bulk upload failed');
+
+      setBulkResult(result);
+      alert(`Bulk upload completed: ${result.successful} successful, ${result.failed} failed`);
+      setShowBulkUpload(false);
+      setBulkFile(null);
+      if (vendorInfo) {
+        fetchProducts(vendorInfo._id);
+      }
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : 'Unknown error';
+      alert('Error: ' + error);
+    } finally {
+      setBulkUploading(false);
     }
   };
 
@@ -1862,12 +1961,20 @@ export default function VendorDashboard() {
                       className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <textarea
-                      placeholder="Description"
-                      value={newProduct.description}
-                      onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      placeholder="Short Description (optional - displays below product name)"
+                      value={newProduct.shortDescription}
+                      onChange={(e) => setNewProduct({ ...newProduct, shortDescription: e.target.value })}
                       className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
-                      rows={2}
+                      rows={1}
                     />
+                    <div className="md:col-span-3">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Description (with formatting)</label>
+                      <RichTextEditor
+                        value={newProduct.description}
+                        onChange={(value) => setNewProduct({ ...newProduct, description: value })}
+                        placeholder="Enter product description with formatting..."
+                      />
+                    </div>
                     <textarea
                       placeholder="Safety Information (one point per line)"
                       value={newProduct.safetyInformation}
@@ -2253,12 +2360,20 @@ export default function VendorDashboard() {
                       className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm"
                     />
                     <textarea
-                      placeholder="Description"
-                      value={editProduct.description}
-                      onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })}
+                      placeholder="Short Description (optional - displays below product name)"
+                      value={editProduct.shortDescription}
+                      onChange={(e) => setEditProduct({ ...editProduct, shortDescription: e.target.value })}
                       className="border border-slate-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3"
-                      rows={2}
+                      rows={1}
                     />
+                    <div className="md:col-span-3">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Description (with formatting)</label>
+                      <RichTextEditor
+                        value={editProduct.description}
+                        onChange={(value) => setEditProduct({ ...editProduct, description: value })}
+                        placeholder="Enter product description with formatting..."
+                      />
+                    </div>
                     <textarea
                       placeholder="Safety Information (one point per line)"
                       value={editProduct.safetyInformation}
@@ -2313,70 +2428,116 @@ export default function VendorDashboard() {
               {products.length === 0 ? (
                 <p className="p-6 text-center text-gray-500">No products yet</p>
               ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold">Product</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold">Type</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold">Approval</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold">Price</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold">Stock</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => (
-                      <tr key={String(product._id)} className="border-b hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {product.image ? (
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-12 h-12 rounded-md object-cover border border-gray-200"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                💊
-                              </div>
-                            )}
-                            <span>{product.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm">{product.productType || 'Generic Medicine'}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            product.approvalStatus === 'approved'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : product.approvalStatus === 'rejected'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {product.approvalStatus || 'pending'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">₹{product.price}</td>
-                        <td className="px-6 py-4">{product.stock}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => handleEditProduct(product)}
-                              className="text-blue-600 hover:text-blue-800 font-semibold"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteProduct(String(product._id))}
-                              className="text-red-600 hover:text-red-800 font-semibold"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+                <>
+                  <div className="px-6 py-4 border-b border-gray-200 flex gap-3 flex-wrap">
+                    <button
+                      onClick={exportProductsToExcel}
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      📤 Export XLSX
+                    </button>
+                    <button
+                      onClick={() => setShowBulkUpload(!showBulkUpload)}
+                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      📥 Bulk Upload
+                    </button>
+                  </div>
+
+                  {showBulkUpload && (
+                    <div className="px-6 py-4 border-b border-gray-200 bg-slate-50">
+                      <div className="flex gap-3 items-center flex-wrap">
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls,.csv"
+                          onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                          className="border border-slate-300 rounded-lg px-3 py-2"
+                        />
+                        <button
+                          onClick={handleBulkUpload}
+                          disabled={!bulkFile || bulkUploading}
+                          className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                        >
+                          {bulkUploading ? 'Uploading...' : 'Upload'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowBulkUpload(false);
+                            setBulkFile(null);
+                          }}
+                          className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-100"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <table className="w-full">
+                    <thead className="bg-emerald-600">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">Product</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">Type</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">Approval</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">Price</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">Stock</th>
+                        <th className="px-6 py-3 text-left text-sm font-semibold text-white">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {products.map((product) => (
+                        <tr key={String(product._id)} className="border-b hover:bg-gray-50">
+                          <td className="px-6 py-4 text-gray-900">
+                            <div className="flex items-center gap-3">
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-12 h-12 rounded-md object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-md bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                  💊
+                                </div>
+                              )}
+                              <span className="text-gray-900">{product.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">{product.productType || 'Generic Medicine'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              product.approvalStatus === 'approved'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : product.approvalStatus === 'rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {product.approvalStatus || 'pending'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-900">₹{product.price}</td>
+                          <td className="px-6 py-4 text-gray-900">{product.stock}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleEditProduct(product)}
+                                className="text-blue-600 hover:text-blue-800 font-semibold"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteProduct(String(product._id))}
+                                className="text-red-600 hover:text-red-800 font-semibold"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
               )}
             </div>
           </div>

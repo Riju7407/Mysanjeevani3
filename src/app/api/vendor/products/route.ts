@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
       vendorId,
       name,
       description,
+      shortDescription,
       price,
       usdPrice,
       productType,
@@ -302,6 +303,7 @@ export async function POST(request: NextRequest) {
       potency: parsedPotency,
       name,
       description,
+      shortDescription: typeof shortDescription === 'string' ? shortDescription.trim() : undefined,
       price: parsedPrice,
       usdPrice: parsedUsdPrice,
       productType: resolvedType,
@@ -354,7 +356,7 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { productId, vendorId, safetyInformation, specifications, ...updateData } = body;
+    const { productId, vendorId, safetyInformation, specifications, shortDescription, ...updateData } = body;
 
     if (!productId || !vendorId) {
       return NextResponse.json(
@@ -425,6 +427,11 @@ export async function PUT(request: NextRequest) {
         ? specifications
         : (product as any).specifications || '';
 
+    const normalizedShortDescription =
+      typeof shortDescription === 'string'
+        ? shortDescription.trim()
+        : (product as any).shortDescription || undefined;
+
     const normalizedPotency =
       typeof updateData.potency === 'string'
         ? (updateData.potency.trim() || undefined)
@@ -455,6 +462,7 @@ export async function PUT(request: NextRequest) {
         quantityUnit: normalizedQuantityUnit,
         safetyInformation: normalizedSafetyInformation,
         specifications: normalizedSpecifications,
+        shortDescription: normalizedShortDescription,
         productType: nextType,
         category: nextCategory,
         approvalStatus: 'pending',

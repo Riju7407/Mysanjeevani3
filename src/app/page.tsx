@@ -12,6 +12,7 @@ import PrimaryServicesCarousel from '@/components/PrimaryServicesCarousel';
 import HealthConcernCarousel from '@/components/HealthConcernCarousel';
 import FeaturedProductsSection from '@/components/FeaturedProductsSection';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
+import { addToCartUtil } from '@/lib/cartUtils';
 
 interface Product {
   _id: number;
@@ -28,6 +29,7 @@ interface Product {
   icon?: string;
   rating?: number;
   reviews?: number;
+  shortDescription?: string;
   currencySymbol?: '₹' | '$';
   currency?: 'INR' | 'USD';
   isPopular?: boolean;
@@ -211,6 +213,10 @@ function PopularProductsDisplay({
                 <div className={isCompactPopularCard ? 'p-3' : 'p-4'}>
                   <p className={`font-medium text-slate-500 mb-1 uppercase tracking-wide ${isCompactPopularCard ? 'text-[10px]' : 'text-[11px]'}`}>{product.brand || 'MySanjeevni'}</p>
                   <h3 className={`font-bold text-slate-900 line-clamp-2 mb-2 ${isCompactPopularCard ? 'text-xs min-h-8' : 'text-sm min-h-10'}`}>{product.name}</h3>
+                  
+                  {product.shortDescription && (
+                    <p className={`text-slate-600 mb-2 line-clamp-2 ${isCompactPopularCard ? 'text-[10px]' : 'text-xs'}`}>{product.shortDescription}</p>
+                  )}
 
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1">
@@ -339,34 +345,10 @@ export default function HomePage() {
   }, []);
 
   const addToCart = (product: Product) => {
-    try {
-      const raw = localStorage.getItem('cart') || '[]';
-      const cart = JSON.parse(raw);
-      const productId = product._id !== undefined && product._id !== null ? String(product._id) : `${product.name || 'product'}`;
-      const existing = cart.find((item: any) => item.id === productId);
-
-      if (existing) {
-        existing.quantity += 1;
-      } else {
-        cart.push({
-          id: productId,
-          name: product.name,
-          price: product.displayPrice ?? product.price,
-          displayPrice: product.displayPrice ?? product.price,
-          displayMrp: product.displayMrp ?? product.mrp,
-          currencySymbol: product.currencySymbol || '₹',
-          currency: product.currency || 'INR',
-          quantity: 1,
-          brand: product.brand,
-          image: product.image || product.icon || '💊',
-          vendorName: 'MySanjeevni',
-        });
-      }
-
-      localStorage.setItem('cart', JSON.stringify(cart));
-      window.dispatchEvent(new Event('storage'));
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
+    const result = addToCartUtil(product);
+    if (!result) {
+      console.error('Failed to add product to cart:', product._id);
+      alert('Failed to add product to cart. Please try again.');
     }
   };
 

@@ -1,8 +1,8 @@
 # Mobile OTP Login Implementation - MySanjeevni
 
-## 🎯 Complete Real-Life Fast2SMS Integration
+## 🎯 Complete Real-Life Pandeyra SMS Integration
 
-This document provides a complete guide to the production-grade Mobile OTP authentication system using Fast2SMS for MySanjeevni.
+This document provides a complete guide to the production-grade Mobile OTP authentication system using Pandeyra SMS for MySanjeevni.
 
 ---
 
@@ -14,7 +14,7 @@ This document provides a complete guide to the production-grade Mobile OTP authe
 4. [Frontend Implementation](#frontend-implementation)
 5. [Database Schema](#database-schema)
 6. [Environment Configuration](#environment-configuration)
-7. [Fast2SMS Integration](#fast2sms-integration)
+7. [Pandeyra SMS Integration](#pandeyra-sms-integration)
 8. [Testing Guide](#testing-guide)
 9. [Troubleshooting](#troubleshooting)
 10. [Best Practices](#best-practices)
@@ -25,11 +25,12 @@ This document provides a complete guide to the production-grade Mobile OTP authe
 
 ### 1. Setup Environment Variables
 
-Update `.env.local` with Fast2SMS and JWT credentials:
+Update `.env.local` with Pandeyra SMS and JWT credentials:
 
 ```env
-# Fast2SMS Configuration
-FAST2SMS_API_KEY="Your_API_Key_From_Fast2SMS"
+# Pandeyra SMS Configuration
+PANDEYRA_SMS_USERNAME="MYSANJV"
+PANDEYRA_SMS_API_KEY="3938e5b8bdXX"
 OTP_TEST_MODE="false"           # Set to "true" for development
 OTP_TTL_SECONDS="300"           # OTP validity in seconds (5 minutes)
 OTP_RESEND_COOLDOWN_SECONDS="60" # Minimum wait between OTP requests
@@ -42,12 +43,13 @@ JWT_EXPIRY="24h"
 JWT_REFRESH_EXPIRY="30d"
 ```
 
-### 2. Get Fast2SMS API Key
+### 2. Get Pandeyra SMS Credentials
 
-1. Visit [Fast2SMS Dashboard](https://www.fast2sms.com/dashboard/dev-api)
-2. Sign up or login
-3. Copy your **Authorization Key** from the Dev API section
-4. Add it to `.env.local`
+1. Visit [Pandeyra SMS Portal](https://sms.pandeyra.com/)
+2. Login with Username: `MYSANJV` and Password: `Mys@123`
+3. Get your API Key: `3938e5b8bdXX`
+4. Sender ID: `MSNJVI` (for DLT compliance)
+5. Add credentials to `.env.local`
 
 ### 3. Test OTP in Development
 
@@ -83,7 +85,7 @@ SIGNUP FLOW:
          ↓
 4. Generate 6-digit OTP
          ↓
-5. Send via Fast2SMS
+5. Send via Pandeyra SMS
          ↓
 6. Store hashed OTP in DB with expiry
          ↓
@@ -138,7 +140,7 @@ Backend:
 │   ├── send-otp/route.ts    # Get OTP for login
 │   └── verify-otp/route.ts  # Verify login OTP
 ├── lib/
-│   ├── fast2sms.ts          # Fast2SMS API client
+│   ├── fast2sms.ts          # Pandeyra SMS API client (Backward compatible)
 │   ├── jwtUtils.ts          # JWT token generation
 │   ├── phoneAuthUtils.ts    # Phone normalization
 │   └── models/PhoneOtp.ts   # OTP schema
@@ -180,7 +182,7 @@ Backend:
 - `400` - Invalid phone/name format
 - `409` - Phone already registered
 - `429` - Rate limit exceeded
-- `500` - Fast2SMS API error
+- `500` - Pandeyra SMS API error or service unavailable
 
 ---
 
@@ -453,8 +455,9 @@ export function CustomSignup() {
 ### Required Variables
 
 ```env
-# Fast2SMS
-FAST2SMS_API_KEY=your_api_key_here
+# Pandeyra SMS
+PANDEYRA_SMS_USERNAME=MYSANJV
+PANDEYRA_SMS_API_KEY=3938e5b8bdXX
 OTP_TEST_MODE=false
 OTP_TTL_SECONDS=300
 OTP_RESEND_COOLDOWN_SECONDS=60
@@ -485,7 +488,7 @@ node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
 
 ---
 
-## 🔌 Fast2SMS Integration
+## 🔌 Pandeyra SMS Integration
 
 ### Sending OTP Functions
 
@@ -516,14 +519,13 @@ const result = await sendOtpViaWhatsApp("9876543210", "123456", "signup");
 import { getFast2SmsBalance } from "@/lib/fast2sms";
 
 const balance = await getFast2SmsBalance();
-console.log(`Available SMS credits: ${balance}`);
+console.log(`Available SMS service: ${balance}`);
 ```
 
 ### API Request Format
 
 ```http
-POST https://www.fast2sms.com/dev/bulkV2
-Authorization: YOUR_API_KEY
+GET https://sms.pandeyra.com/submitsms.jsp?user=MYSANJV&key=API_KEY&mobile=PHONE&message=MESSAGE&senderid=MSNJVI&accusage=1
 Content-Type: application/json
 
 {
@@ -667,25 +669,26 @@ testSignup();
 
 **Causes:**
 
-- Fast2SMS API key is invalid
+- Pandeyra API key is invalid
 - Phone number format is wrong
-- SMS route is blocked in your region
+- API request format is incorrect
 - Account SMS balance is low
 
 **Solutions:**
 
 ```env
-# 1. Verify API key
-FAST2SMS_API_KEY="Check from https://www.fast2sms.com/dashboard/dev-api"
+# 1. Verify API credentials
+PANDEYRA_SMS_USERNAME="MYSANJV"
+PANDEYRA_SMS_API_KEY="3938e5b8bdXX"
 
 # 2. Use test mode to verify setup
 OTP_TEST_MODE=true
 
-# 3. Check wallet balance
-curl "https://www.fast2sms.com/dev/wallet?authorization=YOUR_KEY"
+# 3. Check Pandeyra portal for credits
+# Login at https://sms.pandeyra.com/ with credentials above
 
-# 4. Use WhatsApp route as fallback
-sendOtpViaWhatsApp(...) // Instead of sendOtpViaFast2Sms(...)
+# 4. Verify sender ID is correct
+# Sender ID: MSNJVI (DLT registered)
 ```
 
 ### Issue: "Invalid OTP" Error
@@ -728,20 +731,20 @@ OTP_RESEND_COOLDOWN_SECONDS=30  # Wait 30s between requests
 # Or wait for rate limit to reset
 ```
 
-### Issue: "FAST2SMS_API_KEY is not configured"
+### Issue: "Pandeyra SMS credentials not configured"
 
 **Solutions:**
 
 ```env
-# 1. Check .env.local has the key
-cat .env.local | grep FAST2SMS_API_KEY
+# 1. Check .env.local has the credentials
+cat .env.local | grep PANDEYRA_SMS_
 
 # 2. Restart development server after changing .env
 npm run dev  # Kill and restart
 
-# 3. Make sure it's quoted properly
-FAST2SMS_API_KEY="your_key_here"  # Correct
-FAST2SMS_API_KEY=your_key_here    # Also works
+# 3. Make sure credentials are correct
+PANDEYRA_SMS_USERNAME="MYSANJV"
+PANDEYRA_SMS_API_KEY="3938e5b8bdXX"
 ```
 
 ---

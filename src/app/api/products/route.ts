@@ -6,6 +6,7 @@ import { detectUserCountry, convertPrice } from '@/lib/currencyUtils';
 import { getCountryFromCookieHeader, isIndiaCountry } from '@/lib/countryPreference';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 async function fetchActiveVendorProducts(query: any, page: number, limit: number) {
   const pipeline: any[] = [
@@ -95,7 +96,13 @@ export async function GET(request: NextRequest) {
     }
     if (subcategory) query.subcategory = subcategory;
     if (brand) query.brand = { $regex: brand, $options: 'i' };
-    if (productType) query.productType = productType;
+    if (productType) {
+      // Match products by main productType OR by extraCategoryPaths first element
+      query.$or = query.$or || [];
+      query.$or.push({ productType: productType });
+      // Check if extraCategoryPaths contains the requested product type as first element
+      query.$or.push({ 'extraCategoryPaths.0': productType });
+    }
     if (potency) query.potency = potency;
     if (quantityUnit) query.quantityUnit = quantityUnit;
     if (quantity) {

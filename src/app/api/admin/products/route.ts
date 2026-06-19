@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
       isPopularLabTests: normalizedPopularSections.includes('LabTests'),
       safetyInformation: body.safetyInformation || undefined,
       specifications: body.specifications || undefined,
+      shortDescription: typeof body.shortDescription === 'string' ? body.shortDescription.trim() : undefined,
       isActive: body.isActive !== undefined ? body.isActive : true,
     });
 
@@ -147,6 +148,10 @@ export async function PUT(request: NextRequest) {
       typeof update.approvalStatus === 'string'
         ? (update.approvalStatus.trim().toLowerCase() || undefined)
         : update.approvalStatus;
+    const normalizedShortDescription =
+      typeof update.shortDescription === 'string'
+        ? update.shortDescription.trim()
+        : update.shortDescription;
     const normalizedPopularSection =
       typeof update.popularSection === 'string' && ['None', 'Generic', 'Ayurveda', 'Homeopathy', 'LabTests'].includes(update.popularSection)
         ? update.popularSection
@@ -185,6 +190,7 @@ export async function PUT(request: NextRequest) {
         quantityUnit: normalizedQuantityUnit,
         productType: normalizedProductType,
         approvalStatus: normalizedApprovalStatus,
+        shortDescription: normalizedShortDescription,
       },
       { new: true }
     );

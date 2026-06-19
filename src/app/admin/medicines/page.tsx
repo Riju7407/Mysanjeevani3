@@ -5,6 +5,7 @@ import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { useImageUpload } from '@/lib/hooks/useImageUpload';
 import MultiCategorySelect from '@/components/MultiCategorySelect';
+import RichTextEditor from '@/components/RichTextEditor';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Medicine {
@@ -28,6 +29,7 @@ interface Medicine {
   icon?: string;
   benefit?: string;
   stock: number;
+  shortDescription?: string;
   description: string;
   safetyInformation?: string;
   specifications?: string;
@@ -426,7 +428,7 @@ const POPULAR_SECTION_OPTIONS = [
   { value: 'LabTests', label: 'Popular Lab Tests' },
 ];
 
-const EMPTY_PROD = { name: '', brand: '', category: '', subcategory: '', categoryPath: [] as string[], categories: [] as string[], extraCategoryPaths: [] as string[][], diseasePaths: [] as string[][], diseaseCategory: '', diseaseSubcategory: '', productType: 'Generic Medicine' as VendorProductType, price: '', usdPrice: '', mrp: '', stock: '', description: '', safetyInformation: '', specifications: '', benefit: '', requiresPrescription: false, image: '', popularSections: [] as string[], potency: '', quantity: '', quantityUnit: 'None' };
+const EMPTY_PROD = { name: '', brand: '', category: '', subcategory: '', categoryPath: [] as string[], categories: [] as string[], extraCategoryPaths: [] as string[][], diseasePaths: [] as string[][], diseaseCategory: '', diseaseSubcategory: '', productType: 'Generic Medicine' as VendorProductType, price: '', usdPrice: '', mrp: '', stock: '', shortDescription: '', description: '', safetyInformation: '', specifications: '', benefit: '', requiresPrescription: false, image: '', popularSections: [] as string[], potency: '', quantity: '', quantityUnit: 'None' };
 const EMPTY_LAB  = { name: '', category: '', price: '', mrp: '', description: '', icon: '', duration: '', testsIncluded: '', popular: false };
 
 /**
@@ -566,11 +568,13 @@ export default function AdminMedicines() {
   };
 
   const normalizeExtraCategoryPath = (productType: string, path: string[]): string[] => {
+    // Extra category paths should maintain their own selected product type at index 0
+    // Do NOT prepend the main productType as it overwrites the selected product type in the path
     if (path.length >= 4) return path.slice(0, 4);
-    if (path.length === 3) return [productType, ...path];
-    const normalized = [productType, ...path];
+    // Simply pad the path to 4 elements without prepending productType
+    const normalized = [...path];
     while (normalized.length < 4) normalized.push('');
-    return normalized;
+    return normalized.slice(0, 4);
   };
 
   const PRODUCT_TYPE_LABELS: Record<string, string> = {
@@ -690,7 +694,10 @@ export default function AdminMedicines() {
     // Always use m.category as primary source, only use categories[0] if categories exist
     const category = m.category || (categories.length > 0 ? getCategoryName(categories[0]) : '');
     const subcategory = m.subcategory || (categories.length > 1 ? getCategoryName(categories[1]) : '');
-    const categoryPath = category ? (subcategory ? [category, subcategory] : [category]) : [];
+    // Load full category hierarchy from categories array if available, fallback to category/subcategory
+    const categoryPath = categories.length > 0 
+      ? categories.map((c: any) => getCategoryName(c)).filter(Boolean)
+      : (category ? (subcategory ? [category, subcategory] : [category]) : []);
     const existingPopularSections: string[] = [];
     if ((m as any).popularSections && Array.isArray((m as any).popularSections)) {
       existingPopularSections.push(...(m as any).popularSections);
@@ -701,7 +708,7 @@ export default function AdminMedicines() {
       if ((m as any).isPopularLabTests) existingPopularSections.push('LabTests');
       if ((m as any).isPopular && existingPopularSections.length === 0) existingPopularSections.push('Generic');
     }
-    setProdForm({ name: m.name, brand: m.brand || '', category, subcategory, categories, categoryPath, extraCategoryPaths: normalizeExtraCategoryPaths(productType, Array.isArray((m as any).extraCategoryPaths) ? (m as any).extraCategoryPaths : []), diseasePaths: Array.isArray((m as any).diseasePaths) ? (m as any).diseasePaths : ((m.diseaseCategory || m.diseaseSubcategory) ? [[m.diseaseCategory || '', m.diseaseSubcategory || '']] : []), diseaseCategory: m.diseaseCategory || '', diseaseSubcategory: m.diseaseSubcategory || '', productType: productType as VendorProductType, price: String(m.price), usdPrice: String((m as any).usdPrice || ''), mrp: String(m.mrp || ''), stock: String(m.stock), description: m.description || '', safetyInformation: (m as any).safetyInformation || '', specifications: (m as any).specifications || '', benefit: m.benefit || '', requiresPrescription: m.requiresPrescription || false, image: m.image || '', popularSections: existingPopularSections, potency: (m as any).potency || '', quantity: (m as any).quantity || '', quantityUnit: (m as any).quantityUnit || 'None' });
+    setProdForm({ name: m.name, brand: m.brand || '', category, subcategory, categories, categoryPath, extraCategoryPaths: normalizeExtraCategoryPaths(productType, Array.isArray((m as any).extraCategoryPaths) ? (m as any).extraCategoryPaths : []), diseasePaths: Array.isArray((m as any).diseasePaths) ? (m as any).diseasePaths : ((m.diseaseCategory || m.diseaseSubcategory) ? [[m.diseaseCategory || '', m.diseaseSubcategory || '']] : []), diseaseCategory: m.diseaseCategory || '', diseaseSubcategory: m.diseaseSubcategory || '', productType: productType as VendorProductType, price: String(m.price), usdPrice: String((m as any).usdPrice || ''), mrp: String(m.mrp || ''), stock: String(m.stock), description: m.description || '', shortDescription: (m as any).shortDescription || '', safetyInformation: (m as any).safetyInformation || '', specifications: (m as any).specifications || '', benefit: m.benefit || '', requiresPrescription: m.requiresPrescription || false, image: m.image || '', popularSections: existingPopularSections, potency: (m as any).potency || '', quantity: (m as any).quantity || '', quantityUnit: (m as any).quantityUnit || 'None' });
     setImages(m.images || []);
     setShowProdForm(true);
   };
@@ -729,7 +736,7 @@ export default function AdminMedicines() {
         }
       }
       
-      const payload = { name: prodForm.name, brand: prodForm.brand, category: prodForm.categoryPath[0] || prodForm.category, subcategory: prodForm.categoryPath[1] || prodForm.subcategory || undefined, categories: prodForm.categoryPath, extraCategoryPaths: (prodForm.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0), diseasePaths: prodForm.diseasePaths || [], diseaseCategory: prodForm.diseasePaths?.[0]?.[0] || prodForm.diseaseCategory || undefined, diseaseSubcategory: prodForm.diseasePaths?.[0]?.[1] || prodForm.diseaseSubcategory || undefined, productType: prodForm.productType || 'Generic Medicine', price: Number(prodForm.price), usdPrice: Number(prodForm.usdPrice), mrp: prodForm.mrp ? Number(prodForm.mrp) : undefined, stock: Number(prodForm.stock) || 0, description: prodForm.description, safetyInformation: prodForm.safetyInformation || undefined, specifications: prodForm.specifications || undefined, benefit: prodForm.benefit || undefined, requiresPrescription: prodForm.requiresPrescription, images: images, image: images.length > 0 ? images[0] : undefined, isActive: true, popularSections: prodForm.popularSections || [] };
+      const payload = { name: prodForm.name, brand: prodForm.brand, category: prodForm.categoryPath[0] || prodForm.category, subcategory: prodForm.categoryPath[1] || prodForm.subcategory || undefined, categories: prodForm.categoryPath, extraCategoryPaths: (prodForm.extraCategoryPaths || []).map((path) => path.map((value) => value.trim()).filter(Boolean)).filter((path) => path.length > 0), diseasePaths: prodForm.diseasePaths || [], diseaseCategory: prodForm.diseasePaths?.[0]?.[0] || prodForm.diseaseCategory || undefined, diseaseSubcategory: prodForm.diseasePaths?.[0]?.[1] || prodForm.diseaseSubcategory || undefined, productType: prodForm.productType || 'Generic Medicine', price: Number(prodForm.price), usdPrice: Number(prodForm.usdPrice), mrp: prodForm.mrp ? Number(prodForm.mrp) : undefined, stock: Number(prodForm.stock) || 0, description: prodForm.description, shortDescription: prodForm.shortDescription || undefined, safetyInformation: prodForm.safetyInformation || undefined, specifications: prodForm.specifications || undefined, benefit: prodForm.benefit || undefined, requiresPrescription: prodForm.requiresPrescription, images: images, image: images.length > 0 ? images[0] : undefined, isActive: true, popularSections: prodForm.popularSections || [] };
       if (editMed) await fetch(`/api/admin/products/${editMed._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       else await fetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       setShowProdForm(false); setEditMed(null); setImages([]); await fetchProducts();
@@ -1293,8 +1300,14 @@ export default function AdminMedicines() {
                               value={path[levelIdx] || ''}
                               onChange={(e) => {
                                 const updated = [...(prodForm.extraCategoryPaths || [])];
-                                const nextPath = path.slice(0, levelIdx);
-                                if (e.target.value) nextPath[levelIdx] = e.target.value;
+                                // Properly handle array truncation and extension
+                                let nextPath = [...path]; // Create a proper copy
+                                nextPath.length = levelIdx; // Truncate to current level to clear deeper levels
+                                if (e.target.value) {
+                                  nextPath[levelIdx] = e.target.value; // Set the selected value at current level
+                                } else {
+                                  nextPath.pop(); // If empty selection, remove this level
+                                }
                                 updated[idx] = nextPath;
                                 setProdForm({ ...prodForm, extraCategoryPaths: updated });
                               }}
@@ -1390,7 +1403,15 @@ export default function AdminMedicines() {
                   <input type="number" placeholder="MRP ₹" value={prodForm.mrp} onChange={(e) => setProdForm({ ...prodForm, mrp: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm" />
                   <input type="number" placeholder="Stock Qty" value={prodForm.stock} onChange={(e) => setProdForm({ ...prodForm, stock: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm" />
                   <input type="text" placeholder="Benefit tag (e.g. Immunity)" value={prodForm.benefit} onChange={(e) => setProdForm({ ...prodForm, benefit: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm" />
-                  <textarea placeholder="Description" value={prodForm.description} onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3" rows={2} />
+                  <textarea placeholder="Short Description (optional - displays below product name)" value={prodForm.shortDescription} onChange={(e) => setProdForm({ ...prodForm, shortDescription: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3" rows={1} />
+                  <div className="md:col-span-3">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Description (with formatting)</label>
+                    <RichTextEditor
+                      value={prodForm.description}
+                      onChange={(value) => setProdForm({ ...prodForm, description: value })}
+                      placeholder="Enter product description with formatting..."
+                    />
+                  </div>
                   <textarea placeholder="Safety Information (one point per line)" value={prodForm.safetyInformation || ''} onChange={(e) => setProdForm({ ...prodForm, safetyInformation: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3" rows={3} />
                   <textarea placeholder="Specifications (one point per line)" value={prodForm.specifications || ''} onChange={(e) => setProdForm({ ...prodForm, specifications: e.target.value })} className="border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm md:col-span-3" rows={3} />
                 </div>

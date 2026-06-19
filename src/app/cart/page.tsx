@@ -6,11 +6,15 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { OTPVerificationModal } from '@/components/OTPVerificationModal';
+import PrescriptionChecker from '@/components/PrescriptionChecker';
 import { isIndiaCountry, normalizeCountryCode, type CountryCode } from '@/lib/countryPreference';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
+import { getMissingPrescriptions, getAllPrescriptions } from '@/lib/prescriptionUtils';
 
 interface CartItem {
   id: string | number;
+  productId?: string | number;
+  productName?: string;
   name: string;
   price: number;
   displayPrice?: number;
@@ -21,6 +25,7 @@ interface CartItem {
   brand: string;
   image?: string;
   vendorId?: string;
+  requiresPrescription?: boolean;
 }
 
 declare global {
@@ -83,6 +88,7 @@ export default function CartPage() {
   const [paypalClientId, setPaypalClientId] = useState('');
   const [paypalCurrency, setPaypalCurrency] = useState('USD');
   const [paypalConfigured, setPaypalConfigured] = useState(false);
+  const [prescriptionsReady, setPrescriptionsReady] = useState(true);
   const [paypalButtonError, setPaypalButtonError] = useState('');
   const [address, setAddress] = useState({
     houseNo: '',
@@ -99,8 +105,8 @@ export default function CartPage() {
 
   const isIndia = isIndiaCountry(selectedCountry);
   const currencySymbol = isIndiaCountry(selectedCountry) ? '₹' : '$';
-  const effectivePrice = (item: CartItem) => Number(item.displayPrice ?? item.price) || 0;
-  const totalPrice = cartItems.reduce((sum, item) => sum + effectivePrice(item) * item.quantity, 0);
+  const effectivePrice = (item?: CartItem) => item ? Number(item.displayPrice ?? item.price) || 0 : 0;
+  const totalPrice = cartItems.reduce((sum, item) => sum + effectivePrice(item) * (item?.quantity || 0), 0);
   const discount = Math.floor(totalPrice * 0.10); // 10% discount
   const finalPrice = totalPrice - discount;
   const deliveryCharge = isIndia ? 50 : 0;
@@ -140,6 +146,8 @@ export default function CartPage() {
             if (product) {
               return {
                 id: item.id,
+                productId: product._id,
+                productName: product.name || 'Product',
                 name: product.name || item.name || 'Product',
                 price: product.displayPrice || product.price || 0,
                 displayPrice: product.displayPrice || product.price || 0,
@@ -150,12 +158,15 @@ export default function CartPage() {
                 brand: product.brand || item.brand || 'MySanjeevni',
                 image: product.image || product.icon || item.image || '💊',
                 vendorId: item.vendorId,
+                requiresPrescription: product.requiresPrescription || false,
               };
             }
           } catch {
             // Fall back to stored item if API fails
             return {
               id: item.id,
+              productId: item.productId || item.id,
+              productName: item.productName || item.name || 'Product',
               name: item.name || 'Product',
               price: Number(item.price ?? item.displayPrice) || 0,
               displayPrice: Number(item.displayPrice ?? item.price) || 0,
@@ -166,6 +177,7 @@ export default function CartPage() {
               brand: item.brand || 'MySanjeevni',
               image: item.image || '💊',
               vendorId: item.vendorId,
+              requiresPrescription: item.requiresPrescription || false,
             };
           }
         })
@@ -183,6 +195,8 @@ export default function CartPage() {
           const normalized = Array.isArray(parsed)
             ? parsed.map((item: any) => ({
                 id: item.id,
+                productId: item.productId || item.id,
+                productName: item.productName || item.name || 'Product',
                 name: item.name || 'Product',
                 price: Number(item.price ?? item.displayPrice) || 0,
                 displayPrice: Number(item.displayPrice ?? item.price) || 0,
@@ -193,6 +207,7 @@ export default function CartPage() {
                 brand: item.brand || 'MySanjeevni',
                 image: item.image || '💊',
                 vendorId: item.vendorId,
+                requiresPrescription: item.requiresPrescription || false,
               }))
             : [];
           setCartItems(normalized);
@@ -313,15 +328,18 @@ export default function CartPage() {
               const captureId =
                 captureData?.capture?.purchase_units?.[0]?.payments?.captures?.[0]?.id || '';
 
+              const prescriptions = getAllPrescriptions();
+
               const order = {
                 _id: Math.random().toString(36).substr(2, 9),
                 userId: user?.id || 'guest',
                 customerName: address.fullName,
                 customerEmail: user?.email || 'not-provided',
                 customerPhone: address.phoneNumber,
-                items: cartItems.map((item) => ({
+                items: cartItems.filter((item) => item).map((item) => ({
                   ...item,
                   vendorId: item.vendorId || 'default-vendor',
+                  prescriptionUrl: item.requiresPrescription ? prescriptions[String(item.productId || item.id)] : undefined,
                 })),
                 totalAmount,
                 subtotal: finalPrice,
@@ -402,14 +420,14 @@ export default function CartPage() {
       return;
     }
     const updated = cartItems.map((item) =>
-      item.id === id ? { ...item, quantity } : item
-    );
+      item && item.id === id ? { ...item, quantity } : item
+    ).filter((item) => item);
     setCartItems(updated);
     localStorage.setItem('cart', JSON.stringify(updated));
   };
 
   const removeFromCart = (id: string | number) => {
-    const updated = cartItems.filter((item) => item.id !== id);
+    const updated = cartItems.filter((item) => item && item.id !== id);
     setCartItems(updated);
     localStorage.setItem('cart', JSON.stringify(updated));
   };
@@ -431,6 +449,21 @@ export default function CartPage() {
       alert('Your cart is empty');
       return;
     }
+    
+    // Check if all prescription-required products have prescriptions
+    const missingPrescriptions = getMissingPrescriptions(
+      cartItems.map(item => ({
+        productId: String(item.productId || item.id),
+        productName: item.productName || item.name,
+        requiresPrescription: item.requiresPrescription || false,
+      }))
+    );
+
+    if (missingPrescriptions.length > 0) {
+      alert(`Please upload prescriptions for the following products:\n${missingPrescriptions.map(p => `• ${p.productName}`).join('\n')}`);
+      return;
+    }
+
     // First check if OTP is verified
     if (!isOTPVerified) {
       setShowOTPModal(true);
@@ -447,15 +480,18 @@ export default function CartPage() {
 
     // COD should not go through online payment gateway.
     if (selectedPaymentMethod === 'cod') {
+      const prescriptions = getAllPrescriptions();
+      
       const order = {
         _id: Math.random().toString(36).substr(2, 9),
         userId: user?.id || 'guest',
         customerName: address.fullName,
         customerEmail: user?.email || 'not-provided',
         customerPhone: address.phoneNumber,
-        items: cartItems.map((item) => ({
+        items: cartItems.filter((item) => item).map((item) => ({
           ...item,
           vendorId: item.vendorId || 'default-vendor',
+          prescriptionUrl: item.requiresPrescription ? prescriptions[String(item.productId || item.id)] : undefined,
         })),
         totalAmount,
         subtotal: finalPrice,
@@ -578,15 +614,18 @@ export default function CartPage() {
               throw new Error(verifyData.error || 'Payment verification failed');
             }
 
+            const prescriptions = getAllPrescriptions();
+
             const order = {
               _id: Math.random().toString(36).substr(2, 9),
               userId: user?.id || 'guest',
               customerName: address.fullName,
               customerEmail: user?.email || 'not-provided',
               customerPhone: address.phoneNumber,
-              items: cartItems.map((item) => ({
+              items: cartItems.filter((item) => item).map((item) => ({
                 ...item,
                 vendorId: item.vendorId || 'default-vendor',
+                prescriptionUrl: item.requiresPrescription ? prescriptions[String(item.productId || item.id)] : undefined,
               })),
               totalAmount,
               subtotal: finalPrice,
@@ -708,6 +747,7 @@ export default function CartPage() {
 
                   <div className="divide-y divide-gray-200">
                     {cartItems.map((item) => {
+                      if (!item) return null;
                       return (
                         <div
                           key={item.id}
@@ -718,7 +758,7 @@ export default function CartPage() {
                             {isImageUrl(item.image) ? (
                               <img
                                 src={item.image}
-                                alt={item.name}
+                                alt={item.name || 'Product'}
                                 className="w-full h-full object-cover rounded-lg"
                                 loading="lazy"
                               />
@@ -729,8 +769,8 @@ export default function CartPage() {
 
                           {/* Product Details */}
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                            <p className="text-sm text-gray-600">{item.brand}</p>
+                            <h3 className="font-semibold text-gray-900">{item.name || 'Product'}</h3>
+                            <p className="text-sm text-gray-600">{item.brand || 'N/A'}</p>
                             <p className="text-lg font-bold text-emerald-600 mt-1">
                               {item.currencySymbol || currencySymbol}{effectivePrice(item).toFixed(2)}
                             </p>
@@ -739,16 +779,16 @@ export default function CartPage() {
                           {/* Quantity Control */}
                           <div className="flex items-center gap-3 bg-gray-100 rounded-lg px-3 py-2">
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
                               className="text-gray-600 hover:text-gray-900 font-bold"
                             >
                               −
                             </button>
                             <span className="w-8 text-center font-semibold text-gray-900">
-                              {item.quantity}
+                              {item.quantity || 1}
                             </span>
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
                               className="text-gray-600 hover:text-gray-900 font-bold"
                             >
                               +
@@ -758,7 +798,7 @@ export default function CartPage() {
                           {/* Total & Remove */}
                           <div className="text-right">
                             <p className="font-bold text-gray-900">
-                              {item.currencySymbol || currencySymbol}{(effectivePrice(item) * item.quantity).toFixed(2)}
+                              {item.currencySymbol || currencySymbol}{(effectivePrice(item) * (item.quantity || 1)).toFixed(2)}
                             </p>
                             <button
                               onClick={() => removeFromCart(item.id)}
@@ -782,6 +822,23 @@ export default function CartPage() {
                     ← Continue Shopping
                   </Link>
                 </div>
+
+                {/* Prescription Checker */}
+                {user && (
+                  <div className="mt-6">
+                    <PrescriptionChecker
+                      cartItems={cartItems.map(item => ({
+                        _id: String(item.productId || item.id),
+                        productId: String(item.productId || item.id),
+                        productName: item.productName || item.name,
+                        quantity: item.quantity || 1,
+                        requiresPrescription: item.requiresPrescription || false,
+                      }))}
+                      userId={user?.id || ''}
+                      onPrescriptionsReady={setPrescriptionsReady}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Price Summary */}
@@ -970,7 +1027,7 @@ export default function CartPage() {
                   value={address.fullName}
                   onChange={handleAddressChange}
                   placeholder="Enter your full name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -984,7 +1041,7 @@ export default function CartPage() {
                   onChange={handleAddressChange}
                   placeholder="Enter 10-digit phone number"
                   maxLength={10}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -997,7 +1054,7 @@ export default function CartPage() {
                   value={address.houseNo}
                   onChange={handleAddressChange}
                   placeholder="e.g., 123 or Flat 4B"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1010,7 +1067,7 @@ export default function CartPage() {
                   value={address.streetAddress}
                   onChange={handleAddressChange}
                   placeholder="Enter building name, street"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1023,7 +1080,7 @@ export default function CartPage() {
                   value={address.city}
                   onChange={handleAddressChange}
                   placeholder="Enter city name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1036,7 +1093,7 @@ export default function CartPage() {
                   value={address.state}
                   onChange={handleAddressChange}
                   placeholder="Enter state name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1050,7 +1107,7 @@ export default function CartPage() {
                   onChange={handleAddressChange}
                   placeholder="Enter 6-digit postal code"
                   maxLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1061,7 +1118,7 @@ export default function CartPage() {
                   name="country"
                   value={address.country}
                   onChange={handleAddressChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900"
                 >
                   <option value="India">India</option>
                   <option value="Other">Other</option>

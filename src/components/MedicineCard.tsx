@@ -6,6 +6,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import SafeHTML from './SafeHTML';
 
 interface MedicineCardProps {
   medicine: {
@@ -22,6 +23,7 @@ interface MedicineCardProps {
     quantity?: number;
     quantityUnit?: string;
     stock?: number;
+    shortDescription?: string;
   };
   onAddCart?: (medicineId: string) => void;
 }
@@ -101,6 +103,20 @@ export default function MedicineCard({
         <h3 className="font-bold text-gray-900 text-sm line-clamp-2 mb-1">
           {medicine.name}
         </h3>
+
+        {/* Short Description */}
+        {medicine.shortDescription && (
+          <div className="text-xs text-gray-600 mb-2 line-clamp-2">
+            {medicine.shortDescription.includes('<') && medicine.shortDescription.includes('>') ? (
+              <SafeHTML
+                html={medicine.shortDescription}
+                className="text-xs"
+              />
+            ) : (
+              medicine.shortDescription
+            )}
+          </div>
+        )}
 
         {/* Brand */}
         {medicine.brand && (

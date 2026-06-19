@@ -6,6 +6,7 @@
 import { useImageUpload } from '@/lib/hooks/useImageUpload';
 import { useState } from 'react';
 import MultiCategorySelect from './MultiCategorySelect';
+import RichTextEditor from './RichTextEditor';
 
 interface Medicine {
   _id?: string;
@@ -100,6 +101,13 @@ export default function MedicineAdminForm({
     setFormData(prev => ({
       ...prev,
       [name]: newValue,
+    }));
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      description: value,
     }));
   };
 
@@ -379,18 +387,21 @@ export default function MedicineAdminForm({
             </div>
           </div>
 
-          {/* Description */}
+          {/* Description with Rich Text Editor */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Description
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Description (with formatting)
             </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Enter detailed medicine description..."
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div className="text-xs text-gray-600 mb-2 flex flex-wrap gap-2">
+              <span className="px-2 py-1 bg-blue-100 rounded">✏️ Bold & Italic</span>
+              <span className="px-2 py-1 bg-green-100 rounded">🎨 Colors</span>
+              <span className="px-2 py-1 bg-purple-100 rounded">📝 Sizes</span>
+              <span className="px-2 py-1 bg-yellow-100 rounded">📋 Lists</span>
+            </div>
+            <RichTextEditor
+              value={formData.description || ''}
+              onChange={handleDescriptionChange}
+              placeholder="Enter detailed medicine description with formatting..."
             />
           </div>
 

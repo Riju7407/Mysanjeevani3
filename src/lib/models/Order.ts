@@ -14,6 +14,8 @@ const orderSchema = new mongoose.Schema(
         quantity: Number,
         price: Number,
         total: Number,
+        requiresPrescription: Boolean,
+        prescriptionUrl: String,
       },
     ],
     totalPrice: Number,
@@ -46,6 +48,17 @@ const orderSchema = new mongoose.Schema(
     shiprocketOrderId: String,
     shiprocketShipmentId: String,
     awbNumber: String,
+    prescriptions: [
+      {
+        productId: String,
+        productName: String,
+        prescriptionUrl: String,
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

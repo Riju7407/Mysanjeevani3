@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Suspense } from 'react';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
+import { addToCartUtil } from '@/lib/cartUtils';
 
 interface Product {
   _id: number;
@@ -29,6 +30,7 @@ interface Product {
   icon?: string;
   benefit?: string;
   description?: string;
+  shortDescription?: string;
   stock: number;
   rating: number;
   reviews: number;
@@ -299,6 +301,7 @@ function MedicinesContent() {
   const rawUrlSubcategory = searchParams.get('subcategory') || '';
   const urlSubcategory = rawUrlSubcategory ? decodeURIComponent(rawUrlSubcategory) : '';
   const urlSearch = searchParams.get('search') || '';
+  const urlConcern = searchParams.get('concern') || '';
   const productsSectionRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolledRef = useRef(false);
 
@@ -381,16 +384,13 @@ function MedicinesContent() {
   };
 
   const addToCart = (product: Product) => {
-    setCart((prev) => ({ ...prev, [product._id]: (prev[product._id] || 0) + 1 }));
-    try {
-      const raw = localStorage.getItem('cart') || '[]';
-      const c = JSON.parse(raw);
-      const existing = c.find((i: any) => i.id === product._id);
-      if (existing) existing.quantity += 1;
-      else c.push({ id: product._id, name: product.name, price: product.displayPrice ?? product.price, displayPrice: product.displayPrice ?? product.price, displayMrp: product.displayMrp ?? product.mrp, currencySymbol: product.currencySymbol || '₹', currency: product.currency || 'INR', quantity: 1, brand: product.brand, image: product.image || product.icon || '💊', vendorName: 'MySanjeevni' });
-      localStorage.setItem('cart', JSON.stringify(c));
-      window.dispatchEvent(new Event('storage'));
-    } catch {}
+    const result = addToCartUtil(product);
+    if (result) {
+      setCart((prev) => ({ ...prev, [product._id]: (prev[product._id] || 0) + 1 }));
+    } else {
+      console.error('Failed to add product to cart:', product._id);
+      alert('Failed to add product to cart. Please try again.');
+    }
   };
 
   const handleBuyNow = (product: Product) => {
@@ -573,9 +573,18 @@ function MedicinesContent() {
           trimmedSearch
         );
 
-      return matchCat && urlCategoryMatch && urlSubcategoryMatch && matchSearch;
+      // Filter by health concern if specified
+      // Check both healthConcerns array and benefit field
+      const matchConcern =
+        !urlConcern ||
+        (p.healthConcerns || []).some((concern) =>
+          matchesFilterValue(concern, urlConcern)
+        ) ||
+        matchesFilterValue(p.benefit, urlConcern);
+
+      return matchCat && urlCategoryMatch && urlSubcategoryMatch && matchSearch && matchConcern;
     });
-  }, [activeTab, deferredSearch, products, sidebarCat, urlCategory, urlSubcategory]);
+  }, [activeTab, deferredSearch, products, sidebarCat, urlCategory, urlSubcategory, urlConcern]);
 
   // Apply sorting
   const sortedDisplayed = useMemo(() => {
@@ -706,6 +715,11 @@ function MedicinesContent() {
               <h1 className="text-3xl font-bold text-gray-900">
                 {TAB_CONFIG.find((t) => t.key === activeTab)?.label || 'Products'}
               </h1>
+              {urlConcern && (
+                <p className="text-emerald-600 mt-1 text-sm font-medium">
+                  Showing products for: <span className="capitalize">{urlConcern}</span>
+                </p>
+              )}
               <p className="text-gray-600 mt-1 text-sm">
                 {sortedDisplayed.length} {sortedDisplayed.length === 1 ? 'product' : 'products'} available
               </p>
@@ -810,6 +824,10 @@ function MedicinesContent() {
                         </p>
                       )}
                       <h3 className="font-bold text-slate-900 line-clamp-2 mb-2 text-xs min-h-8">{product.name}</h3>
+                      
+                      {product.shortDescription && (
+                        <p className="text-xs text-slate-600 mb-2 line-clamp-2">{product.shortDescription}</p>
+                      )}
 
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1">
