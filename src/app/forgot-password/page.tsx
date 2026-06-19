@@ -12,7 +12,7 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
 
   const [role, setRole] = useState<'user' | 'vendor' | 'doctor'>('user');
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,10 +40,10 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password/send-otp', {
+      const response = await fetch('/api/auth/forgot-password/send-otp-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, role }),
+        body: JSON.stringify({ email, role }),
       });
 
       const data = await response.json();
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
 
       setOtpSent(true);
       setCooldown(Number(data.cooldownSeconds || 60));
-      setSuccess('OTP sent to your registered mobile number.');
+      setSuccess('OTP sent to your registered email address.');
     } catch {
       setError('Failed to send OTP. Please try again.');
     } finally {
@@ -94,11 +94,11 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password/reset', {
+      const response = await fetch('/api/auth/forgot-password/reset-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone,
+          email,
           otp,
           newPassword,
           role,
@@ -136,7 +136,7 @@ export default function ForgotPasswordPage() {
           <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
             <h1 className="text-2xl font-bold text-gray-900">Forgot Password</h1>
             <p className="mt-2 text-sm text-gray-600">
-              Reset your password using your registered mobile number.
+              Reset your password using your registered email address.
             </p>
 
             <form onSubmit={handleResetPassword} className="mt-6 space-y-4">
@@ -157,15 +157,15 @@ export default function ForgotPasswordPage() {
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Registered Mobile Number
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Registered Email Address
                 </label>
                 <input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Enter your registered mobile number"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your registered email address"
                   className="w-full rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-500 px-4 py-3 outline-none transition focus:border-transparent focus:ring-2 focus:ring-emerald-500"
                   required
                 />

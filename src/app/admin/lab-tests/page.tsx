@@ -116,14 +116,15 @@ export default function LabTestsAdmin() {
       const token = localStorage.getItem('adminToken');
       if (!token) throw new Error('Not authenticated');
 
-      // Filter to only local and vendor tests (partner tests can't be updated)
+      // Separate local/vendor tests from partner tests
       const updateableTests = labTests.filter(
         (test) => test.provider === 'local' || test.provider === 'vendor' || !test.provider
       );
+      const partnerTests = labTests.filter(
+        (test) => test.provider === 'thyrocare' || test.provider === 'healthians' || test.provider === 'partner'
+      );
 
-      const partnerTestsCount = labTests.length - updateableTests.length;
-
-      // Update each test
+      // Update local and vendor tests
       const updates = updateableTests.map((test) => ({
         ...test,
         popular: selectedTests.has(test._id),
@@ -153,9 +154,27 @@ export default function LabTestsAdmin() {
         }
       }
 
-      const successMsg = `Successfully updated ${updates.length} popular lab tests!${
-        partnerTestsCount > 0 ? ` (Note: ${partnerTestsCount} partner tests cannot be modified)` : ''
-      }`;
+      // Update popular partner tests (thyrocare, healthians)
+      const popularPartnerTestIds = partnerTests
+        .filter((test) => selectedTests.has(test._id))
+        .map((test) => test._id);
+
+      if (partnerTests.length > 0) {
+        const partnerResponse = await fetch('/api/admin/lab-tests/popular-partners', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ popularTestIds: popularPartnerTestIds }),
+        });
+
+        if (!partnerResponse.ok) {
+          console.warn('Warning: Could not update popular partner tests');
+        }
+      }
+
+      const successMsg = `Successfully updated ${updates.length + popularPartnerTestIds.length} popular lab tests!`;
       setSuccess(successMsg);
       fetchLabTests();
     } catch (err: any) {

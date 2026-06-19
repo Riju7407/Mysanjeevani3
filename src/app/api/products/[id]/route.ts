@@ -23,31 +23,22 @@ export async function GET(
       const { id } = await params;
       const normalizedId = (id || '').trim();
       const isNumericId = /^\d+$/.test(normalizedId);
-      const numericId = isNumericId ? Number(normalizedId) : NaN;
-      const isObjectId = mongoose.Types.ObjectId.isValid(normalizedId);
 
-      if (!isNumericId && !isObjectId) {
-        console.warn(`[API] Invalid product id format: ${normalizedId}`);
-        return NextResponse.json({ error: 'Invalid product id' }, { status: 400 });
+      if (!isNumericId) {
+        console.warn(`[API] Invalid product id format (must be numeric): ${normalizedId}`);
+        return NextResponse.json({ error: 'Invalid product id - numeric ID required' }, { status: 400 });
       }
 
+      const numericId = Number(normalizedId);
+
       try {
-        console.log(`[API] Fetching product with id: ${normalizedId}, isNumeric: ${isNumericId}, isObjectId: ${isObjectId}`);
+        console.log(`[API] Fetching product with numeric id: ${numericId}`);
         
         const query: any = {
+          _id: numericId,
           isActive: true,
           $or: [{ approvalStatus: 'approved' }, { approvalStatus: { $exists: false } }],
         };
-        
-        // Use numeric ID if available, otherwise use string ID
-        if (isNumericId) {
-          query._id = numericId;
-        } else if (isObjectId) {
-          query._id = normalizedId;
-        } else {
-          // Fallback: try both numeric and string
-          query.$or.push({ _id: numericId }, { _id: normalizedId });
-        }
 
         console.log(`[API] Query filter:`, JSON.stringify(query));
 

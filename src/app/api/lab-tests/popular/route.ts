@@ -49,57 +49,19 @@ export async function GET(request: NextRequest) {
       limit,
     });
 
-    // Combine and format all sources
-    const allTests = [
-      ...labTests.map((t: any) => ({
-        _id: t._id?.toString(),
-        testId: t.testId,
-        name: t.testName,
-        testName: t.testName,
-        description: t.description,
-        price: t.price,
-        mrp: t.mrp,
-        category: t.category,
-        icon: t.icon || '🧪',
-        image: t.image,
-        rating: t.rating,
-        reviews: t.reviews,
-        popular: t.popular,
-        isActive: t.isActive,
-        source: 'local-lab-tests',
-        stock: 10,
-        currencySymbol: '₹',
-      })),
-      ...products.map((p: any) => ({
-        _id: p._id?.toString(),
-        testId: p._id?.toString(),
-        name: p.name,
-        testName: p.name,
-        shortDescription: p.shortDescription,
-        description: p.description,
-        price: p.price,
-        mrp: p.mrp,
-        displayPrice: p.price,
-        displayMrp: p.mrp,
-        category: p.category,
-        icon: p.icon || '🧪',
-        image: p.image,
-        rating: p.rating,
-        reviews: p.reviews,
-        popular: true,
-        isActive: p.isActive,
-        source: 'vendor-products',
-        stock: p.stock || 10,
-        currencySymbol: '₹',
-      })),
-      ...partnerTests.slice(0, limit).map((t: any) => ({
-        ...t,
-        source: t.provider || 'partner',
-        testName: t.name || t.testName,
-        icon: t.icon || '🧪',
-        popular: true,
-      })),
-    ];
+    // Filter partner tests to only include thyrocare
+    const thyroCareTests = partnerTests.filter((t: any) => 
+      t.provider?.toLowerCase() === 'thyrocare' || t.provider?.toLowerCase() === 'thyrocare_'
+    );
+
+    // Combine and format thyrocare tests only
+    const allTests = thyroCareTests.slice(0, limit).map((t: any) => ({
+      ...t,
+      source: 'thyrocare',
+      testName: t.name || t.testName,
+      icon: t.icon || '🧪',
+      popular: true,
+    }));
 
     // Remove duplicates and limit results
     const uniqueTests = Array.from(

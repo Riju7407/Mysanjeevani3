@@ -92,10 +92,10 @@ export async function GET(request: NextRequest) {
       })),
     ];
 
-    const total = totalLabTests + totalProducts + partnerTests.length;
+    const total = allTests.length;
 
     return NextResponse.json({
-      data: allTests.slice(0, limit),
+      data: allTests,
       total,
       page,
       limit,

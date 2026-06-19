@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAdminToken } from '@/lib/tokenUtils';
+import { registerAdminToken } from '@/lib/auth/adminAuth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,9 @@ export async function POST(request: NextRequest) {
 
     // Generate admin token with 5-day expiration
     const tokenPayload = generateAdminToken(adminEmail);
+
+    // Register token for verification in route handlers
+    registerAdminToken(tokenPayload.token, tokenPayload.email, tokenPayload.expiresAt, tokenPayload.createdAt);
 
     // Return success response
     return NextResponse.json(
