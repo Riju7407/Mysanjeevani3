@@ -11,7 +11,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!test) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ labTest: test });
   } catch (error) {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error('Error fetching lab test:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: `Failed to fetch lab test: ${errorMessage}` }, { status: 500 });
   }
 }
 
@@ -25,7 +27,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ labTest: updated });
   } catch (error) {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error('Error updating lab test:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: `Failed to update lab test: ${errorMessage}` }, { status: 500 });
   }
 }
 
@@ -38,6 +42,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     if (!deleted) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ message: 'Lab test deleted' });
   } catch (error) {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error('Error deleting lab test:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: `Failed to delete lab test: ${errorMessage}` }, { status: 500 });
   }
 }

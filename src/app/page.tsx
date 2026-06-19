@@ -293,6 +293,7 @@ export default function HomePage() {
 
   // All products state
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [popularLabTests, setPopularLabTests] = useState<Product[]>([]);
   const [reviewSummaries, setReviewSummaries] = useState<Record<string, ReviewSummary>>({});
   const [loading, setLoading] = useState(true);
   const [trustVisible, setTrustVisible] = useState(false);
@@ -305,8 +306,17 @@ export default function HomePage() {
         const data = await res.json();
         setAllProducts(data.products || []);
 
-        // Fetch review summaries for all products
-        const productIds = (data.products || []).map((p: Product) => p._id).join(',');
+        // Fetch popular lab tests from dedicated endpoint
+        const labRes = await fetch('/api/lab-tests/popular?limit=8', { cache: 'no-store' });
+        const labData = await labRes.json();
+        setPopularLabTests(labData.data || []);
+
+        // Combine product IDs for review summaries
+        const allIds = [
+          ...(data.products || []).map((p: Product) => p._id),
+          ...(labData.data || []).map((t: any) => t._id),
+        ];
+        const productIds = allIds.join(',');
         if (productIds) {
           const reviewRes = await fetch(`/api/reviews?productIds=${productIds}`, {
             cache: 'no-store',
@@ -372,9 +382,8 @@ export default function HomePage() {
   const homeopathy = allProducts.filter(
     (p) => p.popularSections?.includes('Homeopathy') || (p.popularSection === 'Homeopathy') || Boolean((p as any).isPopularHomeopathy)
   );
-  const labTests = allProducts.filter(
-    (p) => p.popularSections?.includes('LabTests') || (p.popularSection === 'LabTests') || Boolean((p as any).isPopularLabTests)
-  );
+  // Use popular lab tests from dedicated endpoint
+  const labTests = popularLabTests;
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

@@ -75,6 +75,7 @@ export default function AdminSidebar() {
     { label: 'Medicines', href: '/admin/medicines', icon: Icons.medicines },
     { label: 'Categories', href: '/admin/categories', icon: Icons.medicines },
     { label: 'Featured Products', href: '/admin/featured-products', icon: Icons.medicines },
+    { label: 'Popular Lab Tests', href: '/admin/lab-tests', icon: Icons.medicines },
     { label: 'Consultations', href: '/admin/consultations', icon: Icons.consultations },
     { label: 'Analytics', href: '/admin/analytics', icon: Icons.analytics },
     { label: 'Orders', href: '/admin/orders', icon: Icons.orders },
