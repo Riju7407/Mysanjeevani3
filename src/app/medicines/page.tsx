@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SocialToggle from '@/components/SocialToggle';
 import { Suspense } from 'react';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 import { addToCartUtil } from '@/lib/cartUtils';
@@ -640,6 +641,7 @@ function MedicinesContent() {
   return (
     <div className="min-h-screen bg-linear-to-b from-emerald-50 via-teal-50 to-white flex flex-col">
       <Header />
+      <SocialToggle />
 
       {/* Hero */}
       <div className="w-full -mt-48">

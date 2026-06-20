@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SocialToggle from '@/components/SocialToggle';
 import HeroCarousel from '@/components/HeroCarousel';
 import LeftSideCarousel from '@/components/LeftSideCarousel';
 import PrimaryServicesCarousel from '@/components/PrimaryServicesCarousel';
@@ -388,6 +389,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Header />
+      <SocialToggle />
 
       {/* Featured Products Section */}
       <FeaturedProductsSection />
@@ -454,6 +456,9 @@ export default function HomePage() {
         onBuyNow={handleBuyNow}
         onProductClick={(id) => router.push(`/medicines/${id}`)}
       />
+
+      {/* Shop by Health Concern Section */}
+      <HealthConcernCarousel />
 
       {/* Between Ayurveda and Homeopathy */}
       <section className="max-w-7xl mx-auto px-4 pb-10 w-full">
@@ -589,9 +594,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Health Concerns Section */}
-      <HealthConcernCarousel />
 
       {/* Trust & Assurance Section */}
       <section ref={trustSectionRef} className="bg-linear-to-br from-slate-50 via-white to-emerald-50 py-14 sm:py-16 relative overflow-hidden">

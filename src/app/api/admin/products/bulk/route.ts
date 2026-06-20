@@ -64,27 +64,58 @@ export async function POST(request: NextRequest) {
       const product = mapRowToProduct(row);
 
       // Basic validation
-      if (!product.name || !product.category || !product.price || !product.usdPrice) {
-        errors.push({ row: i + 2, error: 'Missing required fields (name, category, price, usdPrice)', data: row });
+      if (!product.name || !product.category || !product.price) {
+        errors.push({ row: i + 2, error: 'Missing required fields (name, category, price)', data: row });
+        continue;
+      }
+
+      // Validate usdPrice if provided
+      if (product.usdPrice === undefined || product.usdPrice === null || isNaN(product.usdPrice)) {
+        errors.push({ row: i + 2, error: 'Invalid or missing usdPrice', data: row });
         continue;
       }
 
       try {
         // Generate a numeric product ID
         const productId = await generateProductId();
-        const createdProduct = await Product.create({
+        
+        // Prepare product data with proper image field
+        const productData: any = {
           _id: productId,
-          ...product,
-        });
+          name: product.name,
+          category: product.category,
+          productType: product.productType || 'Generic Medicine',
+          price: product.price,
+          usdPrice: product.usdPrice,
+          stock: product.stock || 0,
+          description: product.description,
+          brand: product.brand,
+          mrp: product.mrp,
+          requiresPrescription: product.requiresPrescription || false,
+          isActive: true,
+          approvalStatus: 'approved',
+        };
+
+        // Handle images - set both image (single) and images (array)
+        if (Array.isArray(product.images) && product.images.length > 0) {
+          productData.image = product.images[0]; // First image as primary
+          productData.images = product.images.slice(0, 4); // Max 4 images
+        } else if (product.images && product.images.length > 0) {
+          productData.image = product.images;
+          productData.images = [product.images];
+        }
+
+        const createdProduct = await Product.create(productData);
         created.push(createdProduct);
       } catch (err: any) {
-        errors.push({ row: i + 2, error: err.message || 'DB error' });
+        console.error(`Error creating product at row ${i + 2}:`, err.message);
+        errors.push({ row: i + 2, error: err.message || 'DB error', data: row });
       }
     }
 
     return NextResponse.json({ success: true, created: created.length, errors }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Bulk upload failed:', error);
-    return NextResponse.json({ error: 'Bulk upload failed' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Bulk upload failed' }, { status: 500 });
   }
 }

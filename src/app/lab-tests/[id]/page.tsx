@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SocialToggle from '@/components/SocialToggle';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { OTPVerificationModal } from '@/components/OTPVerificationModal';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
@@ -617,6 +618,7 @@ export default function LabTestDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
+      <SocialToggle />
 
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">

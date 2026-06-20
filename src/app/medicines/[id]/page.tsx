@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SocialToggle from '@/components/SocialToggle';
 import { usePreferredCountry } from '@/lib/usePreferredCountry';
 import { addToCartUtil } from '@/lib/cartUtils';
 import SafeHTML from '@/components/SafeHTML';
@@ -668,6 +669,7 @@ export default function MedicineDetailsPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
+      <SocialToggle />
 
       <div className="w-full px-4 py-8 flex-1">
         <div className="max-w-7xl mx-auto">
@@ -1145,6 +1147,12 @@ export default function MedicineDetailsPage() {
                           <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                             <p className="text-xs text-slate-600 font-semibold mb-1">Category</p>
                             <p className="text-slate-900 font-medium">{product.category}</p>
+                          </div>
+                        )}
+                        {product.potency && (
+                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-xs text-slate-600 font-semibold mb-1">Potency</p>
+                            <p className="text-slate-900 font-medium">{product.potency}</p>
                           </div>
                         )}
                       </div>
