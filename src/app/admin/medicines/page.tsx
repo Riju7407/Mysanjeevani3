@@ -1230,6 +1230,21 @@ export default function AdminMedicines() {
                     
                     // Build hierarchy levels
                     for (let i = 0; i < 10; i++) {
+                      // For level 1 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
+                      // to ensure correct product type's subcategories are returned
+                      if (i === 1 && prodForm.categoryPath[0]) {
+                        const options = getSubcategoryOptionsForType(productTypeName, prodForm.categoryPath[0]);
+                        if (options && options.length > 0) {
+                          hierarchyLevels.push(options);
+                          if (i < prodForm.categoryPath.length) {
+                            currentLevelName = prodForm.categoryPath[i];
+                          } else {
+                            break;
+                          }
+                          continue;
+                        }
+                      }
+
                       const options = getNodeChildren(currentLevelName);
                       if (!options || options.length === 0) break;
                       hierarchyLevels.push(options);

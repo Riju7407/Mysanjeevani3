@@ -183,6 +183,30 @@ async function verifyVendorToken(authHeader?: string): Promise<string | null> {
   }
 }
 
+// Flexible field value getter supporting multiple column name variations
+function getFieldValue(obj: any, possibleNames: string[]): string | undefined {
+  if (!obj || typeof obj !== 'object') return undefined;
+  
+  for (const name of possibleNames) {
+    // Try exact match first
+    if (name in obj && obj[name]) {
+      const val = String(obj[name]).trim();
+      if (val) return val;
+    }
+    
+    // Try case-insensitive match
+    const lowerName = name.toLowerCase();
+    for (const key in obj) {
+      if (key.toLowerCase() === lowerName && obj[key]) {
+        const val = String(obj[key]).trim();
+        if (val) return val;
+      }
+    }
+  }
+  
+  return undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
@@ -240,69 +264,63 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < products.length; i++) {
       const product = products[i];
       try {
-        // Validate required fields
-        const name = String(product.name || '').trim();
-        const category = String(product.category || '').trim();
-        const price = Number(product.price ?? 0);
-        const usdPrice = Number(product.usdPrice ?? 0);
-        const images = product.images || product.image || [];
+        // Extract fields using flexible column name matching - ALL OPTIONAL
+        const name = getFieldValue(product, ['name', 'productName', 'product_name', 'Product Name', 'PRODUCT NAME']) || `Product ${i + 1}`;
+        const category = getFieldValue(product, ['category', 'productCategory', 'product_category', 'Category', 'Product Category', 'CATEGORY']) || '';
+        const priceStr = getFieldValue(product, ['price', 'productPrice', 'product_price', 'Price', 'Product Price', 'PRICE']);
+        const usdPriceStr = getFieldValue(product, ['usdPrice', 'usd_price', 'USD_Price', 'USD_PRICE', 'USD Price', 'usdprice']);
+        const priceValue = priceStr ? Number(priceStr) : 0;
+        const usdPriceValue = usdPriceStr ? Number(usdPriceStr) : 0;
 
-        if (!name || !category || !price || !usdPrice) {
-          failed.push({
-            row: i + 2,
-            error: 'Missing required fields: name, category, price, usdPrice',
-            data: product,
-          });
-          continue;
+        // Extract images with flexible field mapping - OPTIONAL
+        let imageValue = getFieldValue(product, ['images', 'image', 'Image', 'Images', 'IMAGE', 'image_url', 'Image URL', 'imageUrl']) || '';
+        
+        // Log for debugging
+        console.log(`Row ${i + 2} - Image value extracted: "${imageValue}" (type: ${typeof imageValue})`);
+
+        // Parse images - could be array or comma-separated string
+        let imageArray: string[] = [];
+        if (typeof imageValue === 'string' && imageValue.trim()) {
+          // Split by comma if multiple, and also handle it as single URL
+          const trimmed = imageValue.trim();
+          imageArray = trimmed.includes(',') 
+            ? trimmed.split(',').map(img => img.trim()).filter(img => img)
+            : [trimmed];
+        } else if (Array.isArray(product.images)) {
+          imageArray = product.images.filter((img: any) => typeof img === 'string' && img.trim());
         }
 
-        // At least one valid image URL from Cloudinary
-        let hasValidImage = false;
+        // Validate each image URL
+        console.log(`Row ${i + 2} - Image array: ${JSON.stringify(imageArray)}`);
         let primaryImage = '';
-
-        if (Array.isArray(images)) {
-          for (const img of images) {
-            if (isCloudinaryImageUrl(img)) {
-              primaryImage = img;
-              hasValidImage = true;
-              break;
-            }
+        for (const img of imageArray) {
+          const trimmedImg = typeof img === 'string' ? img.trim() : '';
+          console.log(`Row ${i + 2} - Checking image: "${trimmedImg}"`);
+          if (isCloudinaryImageUrl(trimmedImg)) {
+            primaryImage = trimmedImg;
+            console.log(`Row ${i + 2} - Valid image found: "${primaryImage}"`);
+            break;
           }
-        } else if (typeof images === 'string' && isCloudinaryImageUrl(images)) {
-          primaryImage = images;
-          hasValidImage = true;
         }
 
-        if (!hasValidImage) {
-          failed.push({
-            row: i + 2,
-            error: 'At least one valid Cloudinary image URL is required',
-            data: product,
-          });
-          continue;
-        }
+        // NOTE: Images are now OPTIONAL - no error if missing or invalid
 
         const { resolvedType, normalizedCategory } = resolveTypeAndCategory(
           product.productType,
           category
         );
 
-        // Prepare product data
+        // Prepare product data using flexible field mapping
         const productId = await generateProductId();
-        const stock = Number(product.stock ?? product.quantity ?? 0);
-        const mrp = product.mrp ? Number(product.mrp) : undefined;
-        const description = product.description || product.desc || '';
-        const brand = product.brand || product.manufacturer || undefined;
+        const stockStr = getFieldValue(product, ['stock', 'quantity', 'Stock', 'Quantity', 'STOCK', 'QUANTITY']);
+        const stock = stockStr ? Number(stockStr) : 0;
+        const mrpStr = getFieldValue(product, ['mrp', 'MRP', 'Mrp']);
+        const mrp = mrpStr ? Number(mrpStr) : undefined;
+        const description = getFieldValue(product, ['description', 'desc', 'Description', 'Desc', 'DESCRIPTION']) || '';
+        const brand = getFieldValue(product, ['brand', 'manufacturer', 'Brand', 'Manufacturer', 'BRAND', 'MANUFACTURER']) || undefined;
 
         // Handle image URLs (multiple images support)
-        const imageUrls = Array.isArray(images)
-          ? images.filter((img: any) => isCloudinaryImageUrl(img))
-          : isCloudinaryImageUrl(images)
-            ? [images]
-            : [];
-
-        // Ensure we have at least the primary image
-        const finalImages = imageUrls.length > 0 ? imageUrls : (primaryImage ? [primaryImage] : []);
+        const finalImages = imageArray.filter((img: any) => isCloudinaryImageUrl(img));
 
         const createdProduct = await Product.create({
           _id: productId,
@@ -311,8 +329,8 @@ export async function POST(request: NextRequest) {
           brand,
           category: normalizedCategory,
           productType: resolvedType,
-          price,
-          usdPrice,
+          price: priceValue,
+          usdPrice: usdPriceValue,
           mrp,
           stock,
           description: description || undefined,

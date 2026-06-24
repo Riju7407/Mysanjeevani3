@@ -1197,12 +1197,16 @@ export default function VendorDashboard() {
       if (!response.ok) throw new Error(result.error || 'Bulk upload failed');
 
       setBulkResult(result);
-      alert(`Bulk upload completed: ${result.successful} successful, ${result.failed} failed`);
-      setShowBulkUpload(false);
-      setBulkFile(null);
-      if (vendorInfo) {
-        fetchProducts(vendorInfo._id);
+      // Keep modal open if there are errors, only close if all succeeded
+      if (result.failed === 0) {
+        alert(`Bulk upload completed: ${result.successful} successful!`);
+        setShowBulkUpload(false);
+        setBulkFile(null);
+        if (vendorInfo) {
+          fetchProducts(vendorInfo._id);
+        }
       }
+      // If there are failed uploads, leave modal open to show error details
     } catch (err: unknown) {
       const error = err instanceof Error ? err.message : 'Unknown error';
       alert('Error: ' + error);
@@ -2128,6 +2132,21 @@ export default function VendorDashboard() {
                       let currentLevelName: string | null = productTypeName;
 
                       for (let i = 0; i < 10; i++) {
+                        // For level 1 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
+                        // to ensure correct product type's subcategories are returned
+                        if (i === 1 && editProduct.categoryPath[0]) {
+                          const options = getSubcategoryOptionsForType(productTypeName, editProduct.categoryPath[0]);
+                          if (options && options.length > 0) {
+                            hierarchyLevels.push(options);
+                            if (i < editProduct.categoryPath.length) {
+                              currentLevelName = editProduct.categoryPath[i];
+                            } else {
+                              break;
+                            }
+                            continue;
+                          }
+                        }
+
                         const options = getNodeChildren(currentLevelName, categoryTree);
                         if (!options || options.length === 0) break;
                         hierarchyLevels.push(options);
@@ -2470,6 +2489,31 @@ export default function VendorDashboard() {
                           Cancel
                         </button>
                       </div>
+
+                      {bulkResult && (
+                        <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
+                          <div className="font-semibold text-gray-900 mb-2">
+                            Upload Result: {bulkResult.successful} successful, {bulkResult.failed} failed
+                          </div>
+                          {bulkResult.failed > 0 && bulkResult.errors && (
+                            <div className="mt-3">
+                              <div className="font-medium text-red-700 mb-2">Errors:</div>
+                              <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {bulkResult.errors.slice(0, 5).map((err: any, idx: number) => (
+                                  <div key={idx} className="bg-red-50 border border-red-200 rounded p-2 text-sm">
+                                    <div className="font-semibold text-red-800">Row {err.row}:</div>
+                                    <div className="text-red-700">{err.error}</div>
+                                    {err.data?.name && <div className="text-gray-600 text-xs mt-1">Product: {err.data.name}</div>}
+                                  </div>
+                                ))}
+                                {bulkResult.failed > 5 && (
+                                  <div className="text-gray-600 text-sm">... and {bulkResult.failed - 5} more errors</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

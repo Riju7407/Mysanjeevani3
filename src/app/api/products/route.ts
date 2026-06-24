@@ -241,6 +241,14 @@ export async function POST(request: NextRequest) {
       potency,
       quantity,
       quantityUnit,
+      categories,
+      categoryPath,
+      extraCategoryPaths,
+      diseasePaths,
+      diseaseCategory,
+      diseaseSubcategory,
+      subcategory,
+      shortDescription,
     } = body;
 
     const normalizedPotency = typeof potency === 'string' ? (potency.trim() || undefined) : potency;
@@ -309,6 +317,14 @@ export async function POST(request: NextRequest) {
       potency: normalizedPotency,
       quantity,
       quantityUnit: normalizedQuantityUnit,
+      categories: Array.isArray(categories) ? categories : (categoryPath && Array.isArray(categoryPath) ? categoryPath : []),
+      categoryPath: Array.isArray(categoryPath) ? categoryPath : (Array.isArray(categories) ? categories : []),
+      extraCategoryPaths: Array.isArray(extraCategoryPaths) ? extraCategoryPaths : [],
+      diseasePaths: Array.isArray(diseasePaths) ? diseasePaths : [],
+      diseaseCategory: diseaseCategory || undefined,
+      diseaseSubcategory: diseaseSubcategory || undefined,
+      subcategory: subcategory || undefined,
+      shortDescription: typeof shortDescription === 'string' ? shortDescription.trim() : undefined,
     });
 
     return NextResponse.json(
