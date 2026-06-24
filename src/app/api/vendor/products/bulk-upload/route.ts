@@ -237,95 +237,26 @@ export async function POST(request: NextRequest) {
     const successful: any[] = [];
     const failed: any[] = [];
 
-    console.log(`Processing ${products.length} products for vendor ${vendorId}`);
-    
-    // Helper function to find field value with multiple possible column names
-    const getFieldValue = (obj: any, possibleNames: string[]): any => {
-      for (const name of possibleNames) {
-        if (obj.hasOwnProperty(name)) {
-          return obj[name];
-        }
-      }
-      return undefined;
-    };
-
     for (let i = 0; i < products.length; i++) {
       const product = products[i];
-      
-      // Log the actual keys in the product object for debugging
-      if (i === 0) {
-        console.log(`Row 2 - Available columns:`, Object.keys(product));
-        console.log(`Row 2 - Raw data:`, product);
-      }
-
       try {
-        // Support multiple column name variations
-        const name = String(getFieldValue(product, ['name', 'Name', 'product_name', 'productName', 'Product Name', 'Product_Name', 'PRODUCT NAME', 'NAME']) || '').trim();
-        const category = String(getFieldValue(product, ['category', 'Category', 'product_category', 'productCategory', 'Product Category', 'CATEGORY']) || '').trim();
-        
-        // Price: required and must be valid
-        const priceValue = getFieldValue(product, ['price', 'Price', 'product_price', 'productPrice', 'Product Price', 'PRICE']);
-        const price = priceValue !== undefined && priceValue !== null && priceValue !== '' 
-          ? Number(priceValue) 
-          : undefined;
-        
-        // USD Price: optional but if provided must be valid
-        const usdPriceValue = getFieldValue(product, ['usdPrice', 'usd_price', 'USD Price', 'usd-price', 'USDPrice', 'USD_PRICE']);
-        const usdPrice = usdPriceValue !== undefined && usdPriceValue !== null && usdPriceValue !== '' 
-          ? Number(usdPriceValue) 
-          : undefined;
-        
-        const images = getFieldValue(product, ['images', 'Images', 'image', 'Image', 'product_images', 'productImages']) || [];
+        // Validate required fields
+        const name = String(product.name || '').trim();
+        const category = String(product.category || '').trim();
+        const price = Number(product.price ?? 0);
+        const usdPrice = Number(product.usdPrice ?? 0);
+        const images = product.images || product.image || [];
 
-        console.log(`Row ${i + 2}: name="${name}", category="${category}", price=${price}, usdPrice=${usdPrice}`);
-
-        // Check for missing or invalid values
-        if (!name) {
+        if (!name || !category || !price || !usdPrice) {
           failed.push({
             row: i + 2,
-            error: `Product name is required. Expected column names: 'name', 'Name', 'Product Name', 'productName', etc. Found columns: ${Object.keys(product).join(', ')}`,
+            error: 'Missing required fields: name, category, price, usdPrice',
             data: product,
           });
           continue;
         }
 
-        if (!category) {
-          failed.push({
-            row: i + 2,
-            error: `Category is required. Expected column names: 'category', 'Category', 'Product Category', etc. Found columns: ${Object.keys(product).join(', ')}`,
-            data: product,
-          });
-          continue;
-        }
-
-        if (price === undefined) {
-          failed.push({
-            row: i + 2,
-            error: 'Price is required',
-            data: product,
-          });
-          continue;
-        }
-
-        if (isNaN(price) || price < 0) {
-          failed.push({
-            row: i + 2,
-            error: `Price must be a valid positive number, got: ${product.price}`,
-            data: product,
-          });
-          continue;
-        }
-
-        if (usdPrice !== undefined && (isNaN(usdPrice) || usdPrice < 0)) {
-          failed.push({
-            row: i + 2,
-            error: `USD Price must be a valid positive number, got: ${product.usdPrice}`,
-            data: product,
-          });
-          continue;
-        }
-
-        // Image validation - images are optional for bulk upload but Cloudinary URLs are preferred
+        // At least one valid image URL from Cloudinary
         let hasValidImage = false;
         let primaryImage = '';
 
@@ -342,27 +273,26 @@ export async function POST(request: NextRequest) {
           hasValidImage = true;
         }
 
-        // For bulk upload, we allow products without images (vendors can add them later)
-        // But we still log a warning if images are missing
-        const imageWarning = !hasValidImage && (Array.isArray(images) ? images.length > 0 : images) 
-          ? ` (Warning: Image URLs provided but not in Cloudinary format. Using empty for now - please add images manually)`
-          : !hasValidImage ? ' (No images provided - you can add images to the product later)' : '';
+        if (!hasValidImage) {
+          failed.push({
+            row: i + 2,
+            error: 'At least one valid Cloudinary image URL is required',
+            data: product,
+          });
+          continue;
+        }
 
         const { resolvedType, normalizedCategory } = resolveTypeAndCategory(
-          getFieldValue(product, ['productType', 'product_type', 'ProductType', 'Product Type', 'type', 'Type']),
+          product.productType,
           category
         );
 
-        console.log(`Row ${i + 2}: Resolved productType="${resolvedType}", normalizedCategory="${normalizedCategory}"`);
-
         // Prepare product data
         const productId = await generateProductId();
-        const stockValue = getFieldValue(product, ['stock', 'Stock', 'quantity', 'Quantity', 'qty', 'QTY']) ?? 0;
-        const stock = Number(stockValue);
-        const mrpValue = getFieldValue(product, ['mrp', 'MRP', 'MRP Price', 'mrp_price']);
-        const mrp = mrpValue ? Number(mrpValue) : undefined;
-        const description = String(getFieldValue(product, ['description', 'Description', 'desc', 'Desc', 'product_description', 'productDescription']) || '').trim();
-        const brand = String(getFieldValue(product, ['brand', 'Brand', 'manufacturer', 'Manufacturer', 'product_brand', 'productBrand']) || '').trim();
+        const stock = Number(product.stock ?? product.quantity ?? 0);
+        const mrp = product.mrp ? Number(product.mrp) : undefined;
+        const description = product.description || product.desc || '';
+        const brand = product.brand || product.manufacturer || undefined;
 
         // Handle image URLs (multiple images support)
         const imageUrls = Array.isArray(images)
@@ -374,41 +304,32 @@ export async function POST(request: NextRequest) {
         // Ensure we have at least the primary image
         const finalImages = imageUrls.length > 0 ? imageUrls : (primaryImage ? [primaryImage] : []);
 
-        console.log(`Row ${i + 2}: Creating product with: name="${name}", category="${normalizedCategory}", price=${price}, usdPrice=${usdPrice}, images=${finalImages.length}`);
-
         const createdProduct = await Product.create({
           _id: productId,
           vendorId,
           name,
-          brand: brand || undefined,
+          brand,
           category: normalizedCategory,
           productType: resolvedType,
           price,
-          ...(usdPrice !== undefined && { usdPrice }),
+          usdPrice,
           mrp,
           stock,
           description: description || undefined,
-          image: primaryImage || undefined,
+          image: primaryImage,
           images: finalImages.slice(0, 4), // Max 4 images
           isActive: true,
           approvalStatus: 'pending',
-          requiresPrescription: String(getFieldValue(product, ['requiresPrescription', 'requires_prescription', 'prescription', 'Prescription', 'Requires Prescription']) || '')
+          requiresPrescription: String(product.requiresPrescription || '')
             .toLowerCase()
             .startsWith('y'),
         });
 
-        successful.push({
-          ...createdProduct.toObject(),
-          warning: imageWarning
-        });
+        successful.push(createdProduct);
       } catch (err: any) {
-        console.error(`Bulk upload error for row ${i + 2}:`, err);
-        const errorMessage = err.message || 'Failed to create product';
-        const mongooseErrors = err.errors ? Object.entries(err.errors).map(([field, error]: any) => `${field}: ${error.message || error}`).join('; ') : undefined;
-        
         failed.push({
           row: i + 2,
-          error: mongooseErrors ? `${errorMessage} (${mongooseErrors})` : errorMessage,
+          error: err.message || 'Failed to create product',
           data: product,
         });
       }

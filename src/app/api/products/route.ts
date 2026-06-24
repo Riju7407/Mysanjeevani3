@@ -241,13 +241,6 @@ export async function POST(request: NextRequest) {
       potency,
       quantity,
       quantityUnit,
-      categories,
-      extraCategoryPaths,
-      diseasePaths,
-      diseaseCategory,
-      diseaseSubcategory,
-      subcategory,
-      shortDescription,
     } = body;
 
     const normalizedPotency = typeof potency === 'string' ? (potency.trim() || undefined) : potency;
@@ -255,8 +248,6 @@ export async function POST(request: NextRequest) {
       typeof quantityUnit === 'string' ? (quantityUnit.trim() || 'None') : (quantityUnit || 'None');
     const normalizedProductType =
       typeof productType === 'string' ? (productType.trim() || undefined) : productType;
-    const normalizedShortDescription =
-      typeof shortDescription === 'string' ? shortDescription.trim() : shortDescription;
     
     // Handle new popularSections array (or fallback to legacy popularSection)
     const normalizedPopularSections =
@@ -293,12 +284,6 @@ export async function POST(request: NextRequest) {
       usdPrice: Number(usdPrice),
       discount,
       category,
-      subcategory,
-      categories: Array.isArray(categories) ? categories : undefined,
-      extraCategoryPaths: Array.isArray(extraCategoryPaths) ? extraCategoryPaths : undefined,
-      diseasePaths: Array.isArray(diseasePaths) ? diseasePaths : undefined,
-      diseaseCategory,
-      diseaseSubcategory,
       brand,
       manufacturer,
       stock,
@@ -307,7 +292,6 @@ export async function POST(request: NextRequest) {
       packaging,
       safetyInformation,
       specifications,
-      shortDescription: normalizedShortDescription,
       requiresPrescription,
       image,
       icon,

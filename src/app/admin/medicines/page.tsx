@@ -601,18 +601,15 @@ export default function AdminMedicines() {
       return activeVendorCategoryMap[selectedProductType] || [];
     }
 
-    // For levelIdx === 2 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
-    // to ensure we get the correct product type's subcategories, not accidentally another product type's
-    if (levelIdx === 2) {
-      return getSubcategoryOptionsForType(selectedProductType, path[1] || '');
-    }
-
-    // For levelIdx >= 3, try tree options first, then fallback
     const parent = path[levelIdx - 1];
     if (!parent) return [];
 
     const treeOptions = getNodeChildren(parent);
     if (treeOptions.length > 0) return treeOptions;
+
+    if (levelIdx === 2) {
+      return getSubcategoryOptionsForType(selectedProductType, path[1] || '');
+    }
 
     return [];
   };
@@ -1233,21 +1230,6 @@ export default function AdminMedicines() {
                     
                     // Build hierarchy levels
                     for (let i = 0; i < 10; i++) {
-                      // For level 1 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
-                      // to ensure correct product type's subcategories are returned
-                      if (i === 1 && prodForm.categoryPath[0]) {
-                        const options = getSubcategoryOptionsForType(productTypeName, prodForm.categoryPath[0]);
-                        if (options && options.length > 0) {
-                          hierarchyLevels.push(options);
-                          if (i < prodForm.categoryPath.length) {
-                            currentLevelName = prodForm.categoryPath[i];
-                          } else {
-                            break;
-                          }
-                          continue;
-                        }
-                      }
-
                       const options = getNodeChildren(currentLevelName);
                       if (!options || options.length === 0) break;
                       hierarchyLevels.push(options);

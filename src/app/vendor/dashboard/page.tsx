@@ -505,18 +505,15 @@ export default function VendorDashboard() {
       return activeVendorCategoryMap[selectedProductType] || [];
     }
 
-    // For levelIdx === 2 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
-    // to ensure we get the correct product type's subcategories, not accidentally another product type's
-    if (levelIdx === 2) {
-      return getSubcategoryOptionsForType(selectedProductType, path[1] || '');
-    }
-
-    // For levelIdx >= 3, try tree options first, then fallback
     const parent = path[levelIdx - 1];
     if (!parent) return [];
 
     const treeOptions = getNodeChildren(parent, categoryTree);
     if (treeOptions.length > 0) return treeOptions;
+
+    if (levelIdx === 2) {
+      return getSubcategoryOptionsForType(selectedProductType, path[1] || '');
+    }
 
     return [];
   };
@@ -1200,18 +1197,7 @@ export default function VendorDashboard() {
       if (!response.ok) throw new Error(result.error || 'Bulk upload failed');
 
       setBulkResult(result);
-      
-      // Show detailed error information if there are failures
-      if (result.failed > 0 && result.errors && result.errors.length > 0) {
-        const errorDetails = result.errors
-          .slice(0, 3) // Show first 3 errors (more detail since they're longer now)
-          .map((err: any) => `Row ${err.row}: ${err.error}`)
-          .join('\n\n');
-        alert(`Bulk upload completed: ${result.successful} successful, ${result.failed} failed\n\n${errorDetails}${result.errors.length > 3 ? '\n\n... and more errors' : ''}`);
-      } else {
-        alert(`Bulk upload completed: ${result.successful} successful, ${result.failed} failed`);
-      }
-      
+      alert(`Bulk upload completed: ${result.successful} successful, ${result.failed} failed`);
       setShowBulkUpload(false);
       setBulkFile(null);
       if (vendorInfo) {
@@ -1743,21 +1729,6 @@ export default function VendorDashboard() {
                       let currentLevelName: string | null = productTypeName;
 
                       for (let i = 0; i < 10; i++) {
-                        // For level 1 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
-                        // to ensure correct product type's subcategories are returned
-                        if (i === 1 && newProduct.categoryPath[0]) {
-                          const options = getSubcategoryOptionsForType(productTypeName, newProduct.categoryPath[0]);
-                          if (options && options.length > 0) {
-                            hierarchyLevels.push(options);
-                            if (i < newProduct.categoryPath.length) {
-                              currentLevelName = newProduct.categoryPath[i];
-                            } else {
-                              break;
-                            }
-                            continue;
-                          }
-                        }
-
                         const options = getNodeChildren(currentLevelName, categoryTree);
                         if (!options || options.length === 0) break;
                         hierarchyLevels.push(options);
@@ -2157,21 +2128,6 @@ export default function VendorDashboard() {
                       let currentLevelName: string | null = productTypeName;
 
                       for (let i = 0; i < 10; i++) {
-                        // For level 1 (subcategories/brands), ALWAYS use getSubcategoryOptionsForType
-                        // to ensure correct product type's subcategories are returned
-                        if (i === 1 && editProduct.categoryPath[0]) {
-                          const options = getSubcategoryOptionsForType(productTypeName, editProduct.categoryPath[0]);
-                          if (options && options.length > 0) {
-                            hierarchyLevels.push(options);
-                            if (i < editProduct.categoryPath.length) {
-                              currentLevelName = editProduct.categoryPath[i];
-                            } else {
-                              break;
-                            }
-                            continue;
-                          }
-                        }
-
                         const options = getNodeChildren(currentLevelName, categoryTree);
                         if (!options || options.length === 0) break;
                         hierarchyLevels.push(options);
