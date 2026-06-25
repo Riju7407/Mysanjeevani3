@@ -51,6 +51,69 @@ const SORT_OPTIONS = [
   { value: 'rating', label: 'Highest Rated' },
 ];
 
+const HOMEOPATHY_GROUPED_SUBCATEGORIES: Record<string, string[]> = {
+  Medicines: [
+    'SBL',
+    'Dr. Reckeweg (Germany)',
+    'Willmar Schwabe (Germany)',
+    'Adel Pekana (Germany)',
+    'Willmar Schwabe India',
+    'BJain',
+    'R S Bhargava',
+    'Baksons',
+    'REPL',
+    'New Life',
+    'Special Tablets',
+    'Cream & Ointment',
+    'Special Liquid/Drops',
+  ],
+  Cosmetics: ['Hair Care', 'Skin Care', 'Oral Care'],
+  Dilutions: ['3X', '6X', '3 CH', '6 CH', '12 CH', '30 CH', '200 CH', '1000 CH', '10M CH', '50M CH', 'CM CH'],
+  'Mother Tinctures': ['SBL', 'Dr. Reckeweg (Germany)', 'Willmar Schwabe India', 'BJain'],
+  Biochemic: ['SBL', 'Dr. Reckeweg (Germany)', 'BJain', 'Willmar Schwabe India'],
+  'Bach Flower': ['Bach Flower Remedies', 'Bach Flower Kits'],
+  'Homeopathy Kits': ['Homeopathy Kits'],
+  Triturations: ['SBL', 'Dr. Reckeweg (Germany)', 'Willmar Schwabe India', 'BJain'],
+  'Millesimal LM Potency': ['SBL', 'BJain'],
+  'Bio Combination': ['SBL', 'Dr. Reckeweg (Germany)', 'BJain', 'Willmar Schwabe India', 'Haslab (HSL)'],
+};
+
+function normalizeText(value?: string) {
+  return (value || '').trim().toLowerCase();
+}
+
+function equalsIgnoreCase(left?: string, right?: string) {
+  return normalizeText(left) === normalizeText(right);
+}
+
+function getHomeopathyFilterTargets(categoryName: string): string[] {
+  if (!categoryName || categoryName === 'All') return [];
+
+  for (const [groupName, items] of Object.entries(HOMEOPATHY_GROUPED_SUBCATEGORIES)) {
+    if (equalsIgnoreCase(groupName, categoryName)) {
+      return [groupName, ...items];
+    }
+  }
+
+  return [HOMEOPATHY_CATEGORY_ALIASES[categoryName.trim().toLowerCase()] || categoryName];
+}
+
+function homeopathyProductMatchesCategory(product: HomeopathyProduct, categoryName: string): boolean {
+  const targets = getHomeopathyFilterTargets(categoryName);
+  if (targets.length === 0) return true;
+
+  const fields = [
+    product.category,
+    product.subcategory,
+    product.brand,
+    ...(Array.isArray((product as HomeopathyProduct & { extraCategoryPaths?: string[][] }).extraCategoryPaths)
+      ? (product as HomeopathyProduct & { extraCategoryPaths?: string[][] }).extraCategoryPaths!.flat()
+      : []),
+  ].filter(Boolean) as string[];
+
+  return targets.some((target) => fields.some((field) => equalsIgnoreCase(field, target)));
+}
+
 const HOMEOPATHY_CATEGORY_ALIASES: Record<string, string> = {
   'dr. reckeweg (germany)': 'Dr. Reckeweg',
   'willmar schwabe (germany)': 'Willmar Schwabe',
@@ -92,18 +155,15 @@ function HomeopathyContent() {
 
   useEffect(() => {
     const normalizedCategory = HOMEOPATHY_CATEGORY_ALIASES[urlCategory.trim().toLowerCase()] || urlCategory;
-    setSelectedCategory(normalizedCategory && categories.includes(normalizedCategory) ? normalizedCategory : 'All');
+    setSelectedCategory(normalizedCategory || 'All');
     setSearch(urlSearch);
     hasAutoScrolledRef.current = false;
-  }, [urlCategory, urlSearch, categories]);
+  }, [urlCategory, urlSearch]);
 
   const filteredProducts = useMemo(() => {
     let result = products.filter((product) => {
       const matchesCategory =
-        selectedCategory === 'All' ||
-        product.category === selectedCategory ||
-        product.subcategory === selectedCategory ||
-        product.brand === selectedCategory;
+        selectedCategory === 'All' || homeopathyProductMatchesCategory(product, selectedCategory);
 
       const searchText = search.trim().toLowerCase();
       const concatenatedHealthConcerns = Array.isArray(product.healthConcerns) ? product.healthConcerns.join(' ') : '';

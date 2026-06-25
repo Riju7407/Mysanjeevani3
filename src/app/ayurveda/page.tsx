@@ -15,6 +15,51 @@ const SORT_OPTIONS = [
   { value: 'rating', label: 'Highest Rated' },
 ];
 
+const AYURVEDA_GROUPED_SUBCATEGORIES: Record<string, string[]> = {
+  Medicines: ['Himalaya', 'Organic India', 'Baidyanath', 'Dabur', 'Zandu', 'Charak', 'Aimil'],
+  'Single Remedies': [
+    'Ras & Sindoor',
+    'Bhasm & Pishti',
+    'Vati & Gutika & Guggulu',
+    'Asava Arishta & Kadha',
+    'Loha & Mandur',
+    'Churan & Powder & Avleha & Pak',
+    'Tailam & Ghrita',
+    'Gold Items',
+    'Special Tablets & Capsules',
+    'Syrups & Tonics',
+  ],
+  'Herbal Food & Juices': ['Chyawanprash', 'Honey', 'Digestives', 'Herbal & Vegetable Juice'],
+};
+
+function getAyurvedaFilterTargets(categoryName: string): string[] {
+  if (!categoryName || categoryName === 'All') return [];
+
+  for (const [groupName, items] of Object.entries(AYURVEDA_GROUPED_SUBCATEGORIES)) {
+    if (equalsIgnoreCase(groupName, categoryName)) {
+      return [groupName, ...items];
+    }
+  }
+
+  return [AYURVEDA_CATEGORY_ALIASES[categoryName.trim().toLowerCase()] || categoryName];
+}
+
+function ayurvedaProductMatchesCategory(product: Product, categoryName: string): boolean {
+  const targets = getAyurvedaFilterTargets(categoryName);
+  if (targets.length === 0) return true;
+
+  const fields = [
+    product.category,
+    product.subcategory,
+    product.brand,
+    ...(Array.isArray((product as Product & { extraCategoryPaths?: string[][] }).extraCategoryPaths)
+      ? (product as Product & { extraCategoryPaths?: string[][] }).extraCategoryPaths!.flat()
+      : []),
+  ].filter(Boolean) as string[];
+
+  return targets.some((target) => fields.some((field) => equalsIgnoreCase(field, target)));
+}
+
 const AYURVEDA_CATEGORY_ALIASES: Record<string, string> = {
   'vati & gutika & guggulu': 'Vati, Gutika & Guggulu',
   'churan & powder & avleha & pak': 'Churan, Powder, Avaleha & Pak',
@@ -106,7 +151,7 @@ function AyurvedaContent() {
 
   useEffect(() => {
     const normalizedCategory = AYURVEDA_CATEGORY_ALIASES[urlCategory.trim().toLowerCase()] || urlCategory;
-    setSelectedCategory(normalizedCategory && CATEGORIES.includes(normalizedCategory) ? normalizedCategory : 'All');
+    setSelectedCategory(normalizedCategory || 'All');
     setSearch(urlSearch);
     hasAutoScrolledRef.current = false;
   }, [urlCategory, urlSearch]);
@@ -138,11 +183,7 @@ function AyurvedaContent() {
   const filtered = useMemo(() => {
     let result = ayurvedaProducts.filter((p) => {
       const matchCat =
-        selectedCategory === 'All' ||
-        equalsIgnoreCase(p.category, selectedCategory) ||
-        equalsIgnoreCase(p.subcategory, selectedCategory) ||
-        equalsIgnoreCase(p.benefit, selectedCategory) ||
-        equalsIgnoreCase(p.brand, selectedCategory);
+        selectedCategory === 'All' || ayurvedaProductMatchesCategory(p, selectedCategory);
       const keyword = search.toLowerCase().trim();
       const concatenatedHealthConcerns = Array.isArray(p.healthConcerns) ? p.healthConcerns.join(' ') : '';
       const matchSearch =

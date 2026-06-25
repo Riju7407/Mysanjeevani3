@@ -148,19 +148,67 @@ const GROUPED_SUBCATEGORIES_MAP: Record<string, Record<string, string[]>> = {
     'Roghan & Oils': ['Roghan & Oils'],
     'Unani Brands': ['Hamdard', 'New Shama', 'Dehlvi', 'Rex'],
   },
+  disease: {
+    Mind: ['Addiction', 'Anxiety & Depression', 'Sleeplessness', 'Weak Memory'],
+    Face: ['Acne & Pimples', 'Dark Circles & Marks', 'Wrinkles & Aging'],
+    Hair: ['Hair Fall', 'Dandruff', 'Alopecia & Bald Patches', 'Premature Graying', 'Lice'],
+    'Eyes & Ear': ['Conjunctivitis', 'Cataract', 'Eye Strain', 'Glaucoma', 'Styes', 'Ear Pain', 'Ear Wax'],
+    'Nose & Throat': ['Allergic Rhinitis', 'Sneezing & Running Nose', 'Sinusitis & Blocked Nose', 'Snoring', 'Tonsillitis & Throat Pain', 'Laryngitis & Hoarse Voice'],
+    'Nervous System': ['Headache & Migraine', 'Vertigo/Motion Sickness', 'Neuralgia & Nerve Pain', 'Epilepsy & Fits'],
+    'Mouth, Gums & Teeth': ['Bad Breath', 'Bleeding Gum/Pyorrhea', 'Mouth Ulcers/Aphthae', 'Cavities & Tooth Pain', 'Stammering'],
+    Respiratory: ['Asthma', 'Bronchitis', 'Cough', 'Pneumonia'],
+    'Rectum & Piles': ['Constipation', 'Piles & Fissures', 'Loose Motions/Diarrhoea', 'IBS & Colitis', 'Fistula', 'Worms'],
+    'Digestive System': ['Indigestion/Acidity/Gas', 'Loss of Appetite', 'Jaundice & Fatty Liver', 'Stomach Pain & Colic', 'Vomiting & Nausea', 'Gall Stones', 'Appendicitis', 'Hernia'],
+    'Heart & Cardiovascular': ['Heart Tonics', 'Chest Pain & Angina', 'Cholesterol & Triglyceride'],
+    'Urinary System': ['Urinary Tract Infection', 'Kidney Stone', 'Frequent Urination'],
+    'Bone, Joint & Muscles': ['Arthritis & Joint Pains', 'Back & Knee Pain', 'Cervical Spondylosis', 'Injuries & Fractures', 'Gout & Uric Acid', 'Osteoporosis', 'Sciatica', 'Heel Pain'],
+    'Skin & Nails': ['Bed Sores', 'Boils & Abscesses', 'Burns', 'Cyst & Tumor', 'Eczema', 'Herpes', 'Nail Fungus', 'Psoriasis & Dry Skin', 'Rash/Itch/Urticaria/Hives', 'Vitiligo & Leucoderma', 'Warts & Corns'],
+    'Fevers & Flu': ['Dengue', 'Flu & Fever', 'Malaria', 'Typhoid'],
+    'Male Problems': ['Hydrocele', 'Premature Ejaculation', 'Impotency', 'Prostate Enlargement'],
+    'Female Problems': ['Underdeveloped Breasts', 'Enlarged Breasts', 'Leucorrhoea', 'Excessive Menses', 'Vaginitis', 'Menopause', 'Painful, Delayed & Scanty Menses'],
+    'Old Age Problems': ['Parkinsons & Trembling', 'Involuntary Urination', 'Alzheimers'],
+    'Children Problems': ['Low Height', 'Autism', 'Bed Wetting', 'Immunity', 'Teething Troubles', 'Irritability & Hyperactive'],
+    'Lifestyle Diseases': ['Diabetes', 'Blood Pressure', 'Obesity', 'Thyroid', 'Hang Over', 'Varicose Veins'],
+    Tonics: ['Anaemia', 'Blood Purifiers', 'General Tonics', 'Weakness & Fatigue'],
+  },
 };
 
-// Helper function to get the group name for a leaf subcategory
-function getGroupNameForSubcategory(tabKey: string, leafSubcategory: string): string | null {
+function getSubcategoryFilterTargets(tabKey: string, subcategoryName: string): string[] {
+  if (!subcategoryName) return [];
+
   const grouped = GROUPED_SUBCATEGORIES_MAP[tabKey];
-  if (!grouped) return null;
-  
-  for (const [groupName, items] of Object.entries(grouped)) {
-    if (items.some(item => equalsIgnoreCase(item, leafSubcategory))) {
-      return groupName;
+  if (grouped) {
+    for (const [groupName, items] of Object.entries(grouped)) {
+      if (equalsIgnoreCase(groupName, subcategoryName)) {
+        return [groupName, ...items];
+      }
     }
   }
-  return null;
+
+  return [subcategoryName];
+}
+
+function getProductClassificationFields(p: Product): string[] {
+  const extraPaths = Array.isArray((p as Product & { extraCategoryPaths?: string[][] }).extraCategoryPaths)
+    ? (p as Product & { extraCategoryPaths?: string[][] }).extraCategoryPaths!.flat()
+    : [];
+
+  return [
+    p.subcategory,
+    p.category,
+    p.diseaseCategory,
+    p.diseaseSubcategory,
+    ...extraPaths,
+  ].filter(Boolean) as string[];
+}
+
+function productMatchesSubcategoryFilter(p: Product, tabKey: string, subcategoryName: string): boolean {
+  if (!subcategoryName) return true;
+
+  const targets = getSubcategoryFilterTargets(tabKey, subcategoryName);
+  const fields = getProductClassificationFields(p);
+
+  return targets.some((target) => fields.some((field) => equalsIgnoreCase(field, target)));
 }
 
 // Map URL category names to product types and tabs
@@ -329,7 +377,6 @@ function MedicinesContent() {
     // urlCategory is already decoded at this point
     const lower = urlCategory.toLowerCase().trim();
     const mappedTab = CATEGORY_TO_TAB[lower] || 'medicines';
-    console.log('[URL → TAB MAPPING]', { urlCategory, lower, mappedTab, CATEGORY_TO_TAB_value: CATEGORY_TO_TAB[lower] });
     setActiveTab(mappedTab as any);
   }, [urlCategory]);
 
@@ -340,11 +387,19 @@ function MedicinesContent() {
     }
 
     const candidates = TAB_SIDEBAR[activeTab] || [];
-    // urlSubcategory is already decoded at this point
     const found = candidates.find(
       (item) => item.toLowerCase() === urlSubcategory.toLowerCase()
     );
-    setSidebarCat(found || 'All');
+    if (found) {
+      setSidebarCat(found);
+      return;
+    }
+
+    const grouped = GROUPED_SUBCATEGORIES_MAP[activeTab];
+    const groupMatch = grouped
+      ? Object.keys(grouped).find((group) => equalsIgnoreCase(group, urlSubcategory))
+      : undefined;
+    setSidebarCat(groupMatch || urlSubcategory);
   }, [urlSubcategory, activeTab]);
 
   useEffect(() => {
@@ -406,16 +461,6 @@ function MedicinesContent() {
 
   // ── Filter products for current tab + sidebar category ──────────────────
   const displayed = useMemo(() => {
-    if (urlSubcategory && activeTab) {
-      console.log('[FILTERING]', {
-        activeTab,
-        urlCategory,
-        urlSubcategory,
-        totalProducts: products.length,
-        hasGroupMapping: !!GROUPED_SUBCATEGORIES_MAP[activeTab],
-      });
-    }
-    
     const tabFiltered = products.filter((p) => {
       const normalizedCategory = normalizeCategory(p.category);
       const productType = (p.productType || '').trim();
@@ -465,18 +510,7 @@ function MedicinesContent() {
 
       const matchCat =
         sidebarCat === 'All' ||
-        fieldMatchesAny(
-          [
-            p.category,
-            p.subcategory,
-            p.diseaseCategory,
-            p.diseaseSubcategory,
-            p.benefit,
-            p.productType,
-            normalizeCategory(p.category),
-          ],
-          sidebarCat
-        );
+        productMatchesSubcategoryFilter(p, activeTab, sidebarCat);
 
     const urlCategoryMatch = !urlCategory || (() => {
       const categoryFields = [
@@ -519,37 +553,8 @@ function MedicinesContent() {
       );
     })();
 
-      // urlSubcategory is already decoded at this point
-      // Check for grouped subcategory mapping (e.g., "Shampoos & Bath Gels" → "Bath & Skin")
-      const groupNameForLeaf = getGroupNameForSubcategory(activeTab, urlSubcategory);
-      
-      // DEBUG: Detailed logging for subcategory filtering
-      if (urlSubcategory && groupNameForLeaf && sidebarCat !== 'All') {
-        console.log('[SUBCATEGORY FILTER]', {
-          activeTab,
-          urlSubcategory,
-          groupNameForLeaf,
-          'p.name': p.name,
-          'p.subcategory': p.subcategory,
-          'p.category': p.category,
-          'p.productType': p.productType,
-          'Match via leaf': equalsIgnoreCase(p.subcategory, groupNameForLeaf),
-        });
-      }
-      
-      const urlSubcategoryMatch = !urlSubcategory || fieldMatchesAny(
-        [
-          p.category,
-          p.subcategory,
-          p.diseaseCategory,
-          p.diseaseSubcategory,
-          p.benefit,
-          p.productType,
-          p.name,
-          p.description,
-        ],
-        urlSubcategory
-      ) || (groupNameForLeaf && equalsIgnoreCase(p.subcategory, groupNameForLeaf));
+      const urlSubcategoryMatch =
+        !urlSubcategory || productMatchesSubcategoryFilter(p, activeTab, urlSubcategory);
 
       const quantityText = p.quantity !== undefined && p.quantity !== null ? String(p.quantity) : '';
       const matchSearch =
